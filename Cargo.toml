@@ -1,9 +1,10 @@
 [package]
 name = "rustdoku"
 version = "0.1.0"
-authors = ["Ville Orkas <villeo@unity3d.com>"]
+authors = ["Ville Orkas <ville@orkas.fi>"]
 edition = "2018"
 
 [profile.release]
+opt-level = 3
 lto = true
 debug = true
