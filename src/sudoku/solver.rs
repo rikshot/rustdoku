@@ -13,7 +13,7 @@ fn brute_force_impl(grid: &mut Grid, index: usize) -> bool {
         if !grid.update_candidates(index) {
             return false;
         }
-        let candidates = cell.borrow().candidates.clone();
+        let candidates = cell.borrow().candidates;
         if candidates.some() {
             for value in 1..10 {
                 if cell.borrow().candidates.get(value - 1) {
@@ -28,7 +28,7 @@ fn brute_force_impl(grid: &mut Grid, index: usize) -> bool {
         }
         return false;
     }
-    return brute_force_impl(grid, index + 1);
+    brute_force_impl(grid, index + 1)
 }
 
 
@@ -38,8 +38,8 @@ mod tests {
 
     #[test]
     fn brute_force_test() {
-        let mut grid = Grid::from_str("060000300400700000000000080000008012500600000000000050082000700000500600000010000");
-        let complete_grid = Grid::from_str("961845327458723169237169584796358412524691873813274956182436795379582641645917238");
+        let mut grid = "060000300400700000000000080000008012500600000000000050082000700000500600000010000".parse().unwrap();
+        let complete_grid = "961845327458723169237169584796358412524691873813274956182436795379582641645917238".parse().unwrap();
         brute_force(&mut grid);
         assert!(grid == complete_grid, "grid = {}, complete_grid = {}", grid.to_string(), complete_grid.to_string())
     }

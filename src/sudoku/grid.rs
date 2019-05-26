@@ -1,9 +1,11 @@
 use std::cell::RefCell;
 use std::iter::*;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use super::cell::Cell;
 
+#[derive(Default)]
 pub struct Grid {
     cells: Vec<Rc<RefCell<Cell>>>,
     rows: Vec<Vec<Rc<RefCell<Cell>>>>,
@@ -25,22 +27,6 @@ impl Grid {
             boxes: Vec::with_capacity(9),
             peers: Vec::with_capacity(20),
         }
-    }
-
-    pub fn from_str(string: &str) -> Grid {
-        let mut grid = Grid::new();
-        for (index, c) in string.char_indices() {
-            let cell = &mut grid.cells[index];
-            cell.borrow_mut().set(c.to_digit(10).unwrap() as usize);
-            if cell.borrow().value != 0 {
-                cell.borrow_mut().frozen = true;
-                cell.borrow_mut().candidates.unset_all();
-            }
-        }
-        for index in 0..81 {
-            grid.update_candidates(index);
-        }
-        grid
     }
 
     pub fn cell(&self, index: usize) -> &Rc<RefCell<Cell>> {
@@ -191,7 +177,7 @@ impl Grid {
                 }
             }
         }
-        return true;
+        true
     }
 }
 
@@ -202,7 +188,27 @@ impl PartialEq for Grid {
                 return false;
             }
         }
-        return true;
+        true
+    }
+}
+
+impl FromStr for Grid {
+    type Err = std::num::ParseIntError;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        let mut grid = Grid::new();
+        for (index, c) in string.char_indices() {
+            let cell = &mut grid.cells[index];
+            cell.borrow_mut().set(c.to_digit(10).unwrap() as usize);
+            if cell.borrow().value != 0 {
+                cell.borrow_mut().frozen = true;
+                cell.borrow_mut().candidates.unset_all();
+            }
+        }
+        for index in 0..81 {
+            grid.update_candidates(index);
+        }
+        Ok(grid)
     }
 }
 

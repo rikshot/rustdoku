@@ -1,4 +1,4 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Candidates {
     value: u16
 }
@@ -11,11 +11,11 @@ impl Candidates {
         }
     }
 
-    pub fn value(&self) -> u16 {
+    pub fn value(self) -> u16 {
         self.value
     }
 
-    pub fn get(&self, candidate: usize) -> bool {
+    pub fn get(self, candidate: usize) -> bool {
         ((1 << candidate) & self.value) > 0
     }
 
@@ -35,15 +35,15 @@ impl Candidates {
         self.value &= !(1 << candidate);
     }
 
-    pub fn some(&self) -> bool {
+    pub fn some(self) -> bool {
         self.value > 0
     }
 
-    pub fn none(&self) -> bool {
+    pub fn none(self) -> bool {
         self.value == 0
     }
 
-    pub fn count(&self) -> usize {
+    pub fn count(self) -> usize {
         let mut count = 0;
         let mut flipper = self.value;
         while flipper > 0 {
