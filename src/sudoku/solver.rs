@@ -1,8 +1,7 @@
 use super::grid::Grid;
 
-pub fn brute_force(grid: &mut Grid) -> &mut Grid {
+pub fn brute_force(grid: &mut Grid) {
     brute_force_impl(grid, 0);
-    grid
 }
 
 fn brute_force_impl(grid: &mut Grid, index: usize) -> bool {

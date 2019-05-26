@@ -6,6 +6,10 @@ use super::cell::Cell;
 
 pub struct Grid {
     cells: Vec<Rc<RefCell<Cell>>>,
+    rows: Vec<Vec<Rc<RefCell<Cell>>>>,
+    columns: Vec<Vec<Rc<RefCell<Cell>>>>,
+    boxes: Vec<Vec<Rc<RefCell<Cell>>>>,
+    peers: Vec<Vec<Rc<RefCell<Cell>>>>,
 }
 
 impl Grid {
@@ -14,7 +18,13 @@ impl Grid {
         for index in 0..81 {
             cells.push(Rc::new(RefCell::new(Cell::new(index, 0))));
         }
-        Grid { cells }
+        Grid {
+            cells,
+            rows: Vec::with_capacity(9),
+            columns: Vec::with_capacity(9),
+            boxes: Vec::with_capacity(9),
+            peers: Vec::with_capacity(20),
+        }
     }
 
     pub fn from_str(string: &str) -> Grid {
@@ -51,16 +61,40 @@ impl Grid {
             .filter(move |cell| cell.borrow().row_index == index)
     }
 
+    pub fn get_row_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
+        if self.rows.get(index).is_none() {
+            self.rows[index] = self.get_row(index).cloned().collect();
+            return &self.rows[index];
+        }
+        &self.rows[index]
+    }
+
     pub fn get_column(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
         self.cells
             .iter()
             .filter(move |cell| cell.borrow().column_index == index)
     }
 
+    pub fn get_column_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
+        if self.columns.get(index).is_none() {
+            self.columns[index] = self.get_column(index).cloned().collect();
+            return &self.columns[index];
+        }
+        &self.columns[index]
+    }
+
     pub fn get_box(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
         self.cells
             .iter()
             .filter(move |cell| cell.borrow().box_index == index)
+    }
+
+    pub fn get_box_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
+        if self.boxes.get(index).is_none() {
+            self.boxes[index] = self.get_box(index).cloned().collect();
+            return &self.boxes[index];
+        }
+        &self.boxes[index]
     }
 
     pub fn get_peers(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
@@ -76,6 +110,14 @@ impl Grid {
                 && peer.borrow().column_index != cell.borrow().column_index
         });
         rows.chain(columns).chain(boxes)
+    }
+
+    pub fn get_peers_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
+        if self.peers.get(index).is_none() {
+            self.peers.insert(index, self.get_peers(index).cloned().collect());
+            return &self.peers[index];
+        }
+        &self.peers[index]
     }
 
     pub fn is_valid(&self) -> bool {
@@ -128,10 +170,10 @@ impl Grid {
     }
 
     pub fn update_candidates(&mut self, index: usize) -> bool {
-        let cell = &self.cells[index];
+        let cell = self.cells[index].clone();
         if cell.borrow().value == 0 {
             cell.borrow_mut().candidates.set_all();
-            for peer in self.get_peers(index) {
+            for peer in self.get_peers_cached(index) {
                 if peer.borrow().value > 0 {
                     cell.borrow_mut().candidates.unset(peer.borrow().value - 1);
                     if cell.borrow().candidates.none() {
@@ -140,7 +182,7 @@ impl Grid {
                 }
             }
         } else {
-            for peer in self.get_peers(index) {
+            for peer in self.get_peers_cached(index) {
                 if peer.borrow().value == 0 {
                     peer.borrow_mut().candidates.unset(cell.borrow().value - 1);
                     if peer.borrow().candidates.none() {
