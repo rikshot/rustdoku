@@ -42,9 +42,7 @@ impl Grid {
     }
 
     pub fn get_row(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells
-            .iter()
-            .filter(move |cell| cell.borrow().row_index == index)
+        self.cells.iter().filter(move |cell| cell.borrow().row_index == index)
     }
 
     pub fn get_row_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
@@ -70,9 +68,7 @@ impl Grid {
     }
 
     pub fn get_box(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells
-            .iter()
-            .filter(move |cell| cell.borrow().box_index == index)
+        self.cells.iter().filter(move |cell| cell.borrow().box_index == index)
     }
 
     pub fn get_box_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
@@ -109,9 +105,9 @@ impl Grid {
     pub fn is_valid(&self) -> bool {
         !self.cells.iter().any(|cell| {
             cell.borrow().value > 0
-                && self.get_peers(cell.borrow().index).any(|peer| {
-                    peer.borrow().value > 0 && peer.borrow().value == cell.borrow().value
-                })
+                && self
+                    .get_peers(cell.borrow().index)
+                    .any(|peer| peer.borrow().value > 0 && peer.borrow().value == cell.borrow().value)
         })
     }
 
@@ -141,13 +137,7 @@ impl Grid {
                 } else {
                     " "
                 });
-                string.push_str(
-                    self.cells[row * 9 + column]
-                        .borrow()
-                        .value
-                        .to_string()
-                        .as_str(),
-                );
+                string.push_str(self.cells[row * 9 + column].borrow().value.to_string().as_str());
             }
             string.push_str(" |\n");
         }
@@ -220,6 +210,6 @@ mod tests {
     fn peer_count() {
         let grid = Grid::new();
         let peers: Vec<&Rc<RefCell<Cell>>> = grid.get_peers(0).collect();
-        assert!(peers.len() == 20);
+        assert_eq!(peers.len(), 20);
     }
 }

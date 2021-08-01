@@ -1,14 +1,11 @@
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Candidates {
-    value: u16
+    value: u16,
 }
 
 impl Candidates {
-
-    pub fn new() -> Candidates {
-        Candidates {
-            value: 511
-        }
+    pub fn new(all: bool) -> Candidates {
+        Candidates { value: if all { 511 } else { 0 } }
     }
 
     pub fn value(self) -> u16 {
@@ -52,7 +49,6 @@ impl Candidates {
         }
         count
     }
-
 }
 
 #[cfg(test)]
@@ -61,14 +57,14 @@ mod tests {
 
     #[test]
     fn get_value() {
-        let c = Candidates::new();
+        let c = Candidates::new(true);
         assert_eq!(c.value, 511);
         assert_eq!(c.get(5), true);
     }
 
     #[test]
     fn set_value() {
-        let mut c = Candidates::new();
+        let mut c = Candidates::new(true);
         c.unset_all();
         c.set(4);
         assert_eq!(c.get(0), false);
@@ -77,14 +73,14 @@ mod tests {
 
     #[test]
     fn mega_test() {
-        let mut c = Candidates::new();
+        let mut c = Candidates::new(true);
         assert!(c.some());
         c.unset_all();
         assert!(c.none());
-        assert!(c.count() == 0);
+        assert_eq!(c.count(), 0);
         c.set_all();
         assert!(c.some());
-        assert!(c.count() == 9);
+        assert_eq!(c.count(), 9);
         for i in 0..9 {
             assert!(c.get(i));
             c.unset(i);

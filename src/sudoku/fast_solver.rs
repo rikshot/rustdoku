@@ -1,32 +1,30 @@
-use super::grid::Grid;
+use super::fast_grid::FastGrid;
 
-pub fn brute_force(grid: &mut Grid) {
-    brute_force_impl(grid, 0);
+pub fn brute_force(grid: FastGrid) -> FastGrid {
+    brute_force_impl(grid, 0).unwrap()
 }
 
-fn brute_force_impl(grid: &mut Grid, index: usize) -> bool {
+fn brute_force_impl(grid: FastGrid, index: usize) -> Option<FastGrid> {
     if index > 80 {
-        return true;
+        return Some(grid);
     }
-    let cell = grid.cell(index).clone();
-    if !cell.borrow().frozen && cell.borrow().value == 0 {
-        if !grid.update_candidates(index) {
-            return false;
-        }
-        let candidates = cell.borrow().candidates;
+    let cell = &grid.cells[index];
+    if !cell.frozen && cell.value == 0 {
+        let candidates = cell.candidates;
         if candidates.some() {
             for value in 1..10 {
-                if cell.borrow().candidates.get(value - 1) {
-                    cell.borrow_mut().set(value);
-                    if brute_force_impl(grid, index + 1) {
-                        return true;
+                if cell.candidates.get(value - 1) {
+                    let grid = grid.set(index, value as u8);
+                    if grid.is_some() {
+                        let grid = brute_force_impl(grid.unwrap(), index + 1);
+                        if grid.is_some() {
+                            return Some(grid.unwrap());
+                        }
                     }
-                    cell.borrow_mut().set(0);
-                    cell.borrow_mut().candidates = candidates;
                 }
             }
         }
-        return false;
+        return None;
     }
     brute_force_impl(grid, index + 1)
 }
@@ -43,7 +41,7 @@ mod tests {
         let complete_grid = "961845327458723169237169584796358412524691873813274956182436795379582641645917238"
             .parse()
             .unwrap();
-        brute_force(&mut grid);
+        grid = brute_force(grid);
         assert!(
             grid == complete_grid,
             "grid = {}, complete_grid = {}",

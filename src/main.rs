@@ -1,13 +1,13 @@
 extern crate rustdoku;
 
-use rustdoku::sudoku::solver::brute_force;
+use rustdoku::sudoku::fast_solver::brute_force;
 
 fn main() {
-	let sudoku_file = std::fs::read_to_string("sudoku17").expect("sudoku17 file not found");
-	let sudokus: Vec<&str> = sudoku_file.lines().collect();
-	for sudoku in sudokus {
-		let mut grid = sudoku.parse().expect("could not parse sudoku");
-		brute_force(&mut grid);
-		println!("{} = {} = {}", sudoku, grid.to_string(), grid.is_valid());
-	}
+    let sudoku_file = std::fs::read_to_string("sudoku17").expect("sudoku17 file not found");
+
+    for sudoku in sudoku_file.lines().take(50) {
+        let mut grid = sudoku.parse().expect("could not parse sudoku");
+        grid = brute_force(grid);
+        println!("{} = {} = {}", sudoku, grid.to_string(), grid.is_valid());
+    }
 }
