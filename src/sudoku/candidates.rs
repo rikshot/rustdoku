@@ -1,11 +1,13 @@
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Copy, Clone)]
 pub struct Candidates {
     value: u16,
 }
 
 impl Candidates {
     pub fn new(all: bool) -> Candidates {
-        Candidates { value: if all { 511 } else { 0 } }
+        Candidates {
+            value: if all { 511 } else { 0 },
+        }
     }
 
     pub fn value(self) -> u16 {

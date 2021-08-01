@@ -5,7 +5,6 @@ use std::str::FromStr;
 
 use super::cell::Cell;
 
-#[derive(Default)]
 pub struct Grid {
     cells: Vec<Rc<RefCell<Cell>>>,
     rows: Vec<Vec<Rc<RefCell<Cell>>>>,

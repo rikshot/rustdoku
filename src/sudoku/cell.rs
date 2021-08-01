@@ -1,6 +1,5 @@
 use super::candidates::Candidates;
 
-#[derive(Debug, Default)]
 pub struct Cell {
     pub value: usize,
     pub index: usize,
