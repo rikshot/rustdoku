@@ -1,4 +1,4 @@
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Candidates {
     value: u16,
 }
@@ -61,7 +61,7 @@ mod tests {
     fn get_value() {
         let c = Candidates::new(true);
         assert_eq!(c.value, 511);
-        assert_eq!(c.get(5), true);
+        assert!(c.get(5));
     }
 
     #[test]
@@ -69,8 +69,8 @@ mod tests {
         let mut c = Candidates::new(true);
         c.unset_all();
         c.set(4);
-        assert_eq!(c.get(0), false);
-        assert_eq!(c.get(4), true);
+        assert!(!c.get(0));
+        assert!(c.get(4));
     }
 
     #[test]

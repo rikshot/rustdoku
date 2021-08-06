@@ -1,201 +1,226 @@
-use std::cell::RefCell;
-use std::iter::*;
-use std::rc::Rc;
-use std::str::FromStr;
+use crate::sudoku::candidates::Candidates;
+use itertools::Itertools;
+use std::{error::Error, fmt, str::FromStr};
+use thiserror::Error;
 
-use super::cell::Cell;
-
-pub struct Grid {
-    cells: Vec<Rc<RefCell<Cell>>>,
-    rows: Vec<Vec<Rc<RefCell<Cell>>>>,
-    columns: Vec<Vec<Rc<RefCell<Cell>>>>,
-    boxes: Vec<Vec<Rc<RefCell<Cell>>>>,
-    peers: Vec<Vec<Rc<RefCell<Cell>>>>,
+#[derive(Copy, Clone, Debug)]
+pub struct Cell {
+    value: u8,
+    candidates: Candidates,
+    frozen: bool,
 }
 
-impl Grid {
-    pub fn new() -> Grid {
-        let mut cells: Vec<Rc<RefCell<Cell>>> = Vec::with_capacity(81);
-        for index in 0..81 {
-            cells.push(Rc::new(RefCell::new(Cell::new(index, 0))));
-        }
-        Grid {
-            cells,
-            rows: Vec::with_capacity(9),
-            columns: Vec::with_capacity(9),
-            boxes: Vec::with_capacity(9),
-            peers: Vec::with_capacity(20),
+impl Cell {
+    pub fn new(value: u8) -> Self {
+        Cell {
+            value,
+            candidates: Candidates::new(value == 0),
+            frozen: false,
         }
     }
 
-    pub fn cell(&self, index: usize) -> &Rc<RefCell<Cell>> {
+    pub fn value(&self) -> u8 {
+        self.value
+    }
+
+    pub fn candidates(&self) -> &Candidates {
+        &self.candidates
+    }
+
+    pub fn freeze(&mut self) {
+        self.frozen = true;
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Grid {
+    cells: [Cell; 81],
+}
+
+const fn insert<const N: usize>(mut array: [usize; N], value: usize) -> [usize; N] {
+    let mut index = 0;
+    while index < array.len() {
+        if array[index] == 0 {
+            array[index] = value;
+            break;
+        }
+        index += 1;
+    }
+    array
+}
+
+const fn peers() -> [[usize; 20]; 81] {
+    let mut rows = [[0; 9]; 9];
+    let mut columns = [[0; 9]; 9];
+    let mut boxes = [[0; 9]; 9];
+    let mut peers = [[0; 20]; 81];
+
+    let mut index = 0;
+    while index < 81 {
+        let row_index = index / 9;
+        let column_index = index % 9;
+        let box_index = row_index / 3 * 3 + column_index / 3;
+        rows[row_index] = insert(rows[row_index], index);
+        columns[column_index] = insert(columns[column_index], index);
+        boxes[box_index] = insert(boxes[box_index], index);
+        index += 1;
+    }
+
+    let mut index = 0;
+    while index < 81 {
+        let row_index = index / 9;
+        let column_index = index % 9;
+        let box_index = row_index / 3 * 3 + column_index / 3;
+        let mut peer_index = 0;
+        while peer_index < 9 {
+            let peer = rows[row_index][peer_index];
+            if peer != index {
+                peers[index] = insert(peers[index], peer);
+            }
+            peer_index += 1;
+        }
+        let mut peer_index = 0;
+        while peer_index < 9 {
+            let peer = columns[column_index][peer_index];
+            if peer != index {
+                peers[index] = insert(peers[index], peer);
+            }
+            peer_index += 1;
+        }
+        let mut peer_index = 0;
+        while peer_index < 9 {
+            let peer = boxes[box_index][peer_index];
+            let peer_row_index = peer / 9;
+            let peer_column_index = peer % 9;
+            if peer_row_index != row_index && peer_column_index != column_index {
+                peers[index] = insert(peers[index], peer);
+            }
+            peer_index += 1;
+        }
+        index += 1;
+    }
+
+    peers
+}
+
+static PEERS: [[usize; 20]; 81] = peers();
+
+impl Grid {
+    pub fn new() -> Self {
+        Grid {
+            cells: [Cell::new(0); 81],
+        }
+    }
+
+    pub fn get(&self, index: usize) -> &Cell {
+        assert!(index < 81);
         &self.cells[index]
     }
 
-    pub fn cells(&self) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells.iter()
+    pub fn get_mut(&mut self, index: usize) -> &mut Cell {
+        assert!(index < 81);
+        &mut self.cells[index]
     }
 
-    pub fn cells_mut(&mut self) -> impl Iterator<Item = &mut Rc<RefCell<Cell>>> {
-        self.cells.iter_mut()
-    }
-
-    pub fn get_row(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells.iter().filter(move |cell| cell.borrow().row_index == index)
-    }
-
-    pub fn get_row_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
-        if self.rows.get(index).is_none() {
-            self.rows[index] = self.get_row(index).cloned().collect();
-            return &self.rows[index];
+    pub fn set(&mut self, index: usize, value: u8) -> bool {
+        assert!(index < 81);
+        assert!(value < 10);
+        let mut cells = self.cells;
+        if !cells[index].frozen {
+            if value > 0 {
+                let cell = Cell::new(value);
+                for peer in PEERS[index] {
+                    let peer = &mut cells[peer];
+                    if peer.value == 0 {
+                        peer.candidates.unset((cell.value - 1) as usize);
+                        if peer.candidates.none() {
+                            return false;
+                        }
+                    } else if cell.value == peer.value {
+                        return false;
+                    }
+                }
+                cells[index] = cell;
+            } else {
+                let old_value = cells[index].value();
+                let mut cell = Cell::new(0);
+                for peer in PEERS[index] {
+                    let peer = &mut cells[peer];
+                    if peer.value > 0 {
+                        cell.candidates.unset(peer.value as usize - 1);
+                        if cell.candidates.none() {
+                            return false;
+                        }
+                    } else if old_value > 0 {
+                        peer.candidates.set(old_value as usize - 1);
+                    }
+                }
+                cells[index] = cell;
+            }
+            self.cells = cells;
+            return true;
         }
-        &self.rows[index]
-    }
-
-    pub fn get_column(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells
-            .iter()
-            .filter(move |cell| cell.borrow().column_index == index)
-    }
-
-    pub fn get_column_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
-        if self.columns.get(index).is_none() {
-            self.columns[index] = self.get_column(index).cloned().collect();
-            return &self.columns[index];
-        }
-        &self.columns[index]
-    }
-
-    pub fn get_box(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        self.cells.iter().filter(move |cell| cell.borrow().box_index == index)
-    }
-
-    pub fn get_box_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
-        if self.boxes.get(index).is_none() {
-            self.boxes[index] = self.get_box(index).cloned().collect();
-            return &self.boxes[index];
-        }
-        &self.boxes[index]
-    }
-
-    pub fn get_peers(&self, index: usize) -> impl Iterator<Item = &Rc<RefCell<Cell>>> {
-        let cell = &self.cells[index];
-        let rows = self
-            .get_row(cell.borrow().row_index)
-            .filter(move |peer| peer.borrow().index != index);
-        let columns = self
-            .get_column(cell.borrow().column_index)
-            .filter(move |peer| peer.borrow().index != index);
-        let boxes = self.get_box(cell.borrow().box_index).filter(move |peer| {
-            peer.borrow().row_index != cell.borrow().row_index
-                && peer.borrow().column_index != cell.borrow().column_index
-        });
-        rows.chain(columns).chain(boxes)
-    }
-
-    pub fn get_peers_cached(&mut self, index: usize) -> &Vec<Rc<RefCell<Cell>>> {
-        if self.peers.get(index).is_none() {
-            self.peers.insert(index, self.get_peers(index).cloned().collect());
-            return &self.peers[index];
-        }
-        &self.peers[index]
-    }
-
-    pub fn is_valid(&self) -> bool {
-        !self.cells.iter().any(|cell| {
-            cell.borrow().value > 0
-                && self
-                    .get_peers(cell.borrow().index)
-                    .any(|peer| peer.borrow().value > 0 && peer.borrow().value == cell.borrow().value)
-        })
+        false
     }
 
     pub fn is_complete(&self) -> bool {
-        !self.cells.iter().any(|cell| cell.borrow().value == 0)
+        !self.cells.iter().any(|cell| cell.value == 0)
     }
 
-    pub fn to_string(&self) -> String {
-        let mut string = String::new();
-        for cell in &self.cells {
-            string.push_str(cell.borrow().value.to_string().as_str())
-        }
-        string
+    pub fn is_valid(&self) -> bool {
+        !self.cells.iter().enumerate().any(|(index, cell)| {
+            cell.value > 0
+                && PEERS[index]
+                    .iter()
+                    .map(|peer| &self.cells[*peer])
+                    .any(|peer| peer.value > 0 && peer.value == cell.value)
+        })
     }
+}
 
-    pub fn pretty(&self) -> String {
-        let mut string = String::new();
-        for row in 0..9 {
-            if (row % 3) == 0 {
-                string.push_str("+-------+-------+-------+\n");
-            }
-            for column in 0..9 {
-                string.push_str(if (column % 9) == 0 {
-                    "| "
-                } else if (column % 3) == 0 {
-                    " | "
-                } else {
-                    " "
-                });
-                string.push_str(self.cells[row * 9 + column].borrow().value.to_string().as_str());
-            }
-            string.push_str(" |\n");
-        }
-        string.push_str("+-------+-------+-------+");
-        string
+impl Default for Grid {
+    fn default() -> Self {
+        Grid::new()
     }
+}
 
-    pub fn update_candidates(&mut self, index: usize) -> bool {
-        let cell = self.cells[index].clone();
-        if cell.borrow().value == 0 {
-            cell.borrow_mut().candidates.set_all();
-            for peer in self.get_peers_cached(index) {
-                if peer.borrow().value > 0 {
-                    cell.borrow_mut().candidates.unset(peer.borrow().value - 1);
-                    if cell.borrow().candidates.none() {
-                        return false;
-                    }
-                }
-            }
-        } else {
-            for peer in self.get_peers_cached(index) {
-                if peer.borrow().value == 0 {
-                    peer.borrow_mut().candidates.unset(cell.borrow().value - 1);
-                    if peer.borrow().candidates.none() {
-                        return false;
-                    }
-                }
-            }
-        }
-        true
+impl fmt::Display for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.cells.iter().map(|cell| cell.value.to_string()).join(""))
     }
 }
 
 impl PartialEq for Grid {
     fn eq(&self, other: &Grid) -> bool {
-        for (a, b) in self.cells().zip(other.cells()) {
-            if a.borrow().value != b.borrow().value {
-                return false;
-            }
-        }
-        true
+        self.cells
+            .iter()
+            .zip(other.cells.iter())
+            .all(|(a, b)| a.value == b.value)
     }
 }
 
+#[derive(PartialEq, Error, Debug)]
+pub enum ParseError {
+    #[error("Invalid digit '{0}' at index {1} while parsing sudoku")]
+    InvalidDigit(char, usize),
+    #[error("Invalid sudoku at index '{0}'")]
+    InvalidSudoku(usize),
+}
+
 impl FromStr for Grid {
-    type Err = std::num::ParseIntError;
+    type Err = Box<dyn Error + Sync + Send>;
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let mut grid = Grid::new();
         for (index, c) in string.char_indices() {
-            let cell = &mut grid.cells[index];
-            cell.borrow_mut().set(c.to_digit(10).unwrap() as usize);
-            if cell.borrow().value != 0 {
-                cell.borrow_mut().frozen = true;
-                cell.borrow_mut().candidates.unset_all();
+            let value = c.to_digit(10).ok_or(ParseError::InvalidDigit(c, index))? as u8;
+            if !grid.set(index, value) {
+                return Err(Box::new(ParseError::InvalidSudoku(index)));
             }
-        }
-        for index in 0..81 {
-            grid.update_candidates(index);
+            let cell = &mut grid.cells[index];
+            if cell.value != 0 {
+                cell.frozen = true;
+            }
         }
         Ok(grid)
     }
@@ -206,9 +231,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn peer_count() {
-        let grid = Grid::new();
-        let peers: Vec<&Rc<RefCell<Cell>>> = grid.get_peers(0).collect();
-        assert_eq!(peers.len(), 20);
+    fn peers() {
+        let peers = PEERS[0];
+        assert_eq!(
+            peers,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 18, 27, 36, 45, 54, 63, 72, 10, 11, 19, 20]
+        );
+    }
+
+    #[test]
+    fn error_digit() {
+        let result =
+            "a60000300400700000000000080000008012500600000000000050082000700000500600000010000".parse::<Grid>();
+        assert!(result.is_err());
+        assert_eq!(
+            result.err().unwrap().downcast::<ParseError>().unwrap().as_ref(),
+            &ParseError::InvalidDigit('a', 0)
+        )
+    }
+
+    #[test]
+    fn error_invalid() {
+        let result =
+            "660000300400700000000000080000008012500600000000000050082000700000500600000010000".parse::<Grid>();
+        assert!(result.is_err());
+        assert_eq!(
+            result.err().unwrap().downcast::<ParseError>().unwrap().as_ref(),
+            &ParseError::InvalidSudoku(1)
+        )
     }
 }
