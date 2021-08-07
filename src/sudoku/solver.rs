@@ -23,7 +23,7 @@ pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
         .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)))
         .collect();
 
-    let mut y = HashMap::new();
+    let mut y = HashMap::with_capacity(729);
     for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
         let b = r / 3 * 3 + c / 3;
         y.insert(
@@ -66,7 +66,7 @@ fn exact_cover(
     x: &[ConstraintType],
     y: &HashMap<RCNType, [ConstraintType; 4]>,
 ) -> HashMap<ConstraintType, HashSet<RCNType>> {
-    let mut ec: HashMap<ConstraintType, HashSet<RCNType>> = HashMap::new();
+    let mut ec: HashMap<ConstraintType, HashSet<RCNType>> = HashMap::with_capacity(324);
     for j in x.iter() {
         ec.insert(*j, HashSet::with_capacity(9));
     }
