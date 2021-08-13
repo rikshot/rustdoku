@@ -26,10 +26,10 @@ fn solve_file(path: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
     let duration = start.elapsed().as_secs_f32();
     let count = sudoku_file.lines().count() as f32;
     println!(
-        "Sudokus: {} Duration: {}s, ~{}ms per sudoku",
+        "Sudokus: {} Duration: {}s, ~{}μs per sudoku",
         count,
         duration,
-        duration / count * 1000.0
+        duration / count * 1000000.0
     );
     Ok(())
 }
@@ -44,7 +44,12 @@ fn solve_single(sudoku: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
 }
 
 fn generate(givens: usize, count: usize) {
-    println!("Generating {} unique sudoku{} with {} givens", count, if count == 1 { "" } else { "s" }, givens);
+    println!(
+        "Generating {} unique sudoku{} with {} givens",
+        count,
+        if count == 1 { "" } else { "s" },
+        givens
+    );
     for _ in 0..count {
         println!("{}", generator::generate(givens));
     }
