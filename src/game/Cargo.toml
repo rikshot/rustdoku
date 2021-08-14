@@ -1,0 +1,24 @@
+[package]
+name = "rustdoku-game"
+version = "0.1.0"
+description = "Solves and generates sudokus"
+authors = ["Ville Orkas <ville@orkas.fi>"]
+edition = "2018"
+
+[dependencies]
+rustdoku-sudoku = { path = "../sudoku" }
+yew = "*"
+getrandom = { version = "*", features = ["js"] }
+wasm-bindgen = "*"
+log = "*"
+wasm-logger = "*"
+gloo-events = "*"
+gloo-dialogs = "*"
+
+[dependencies.web-sys]
+version = "*"
+features = [
+    "Window",
+    "Navigator",
+    "Clipboard"
+]

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Sudoku</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link data-trunk rel="rust" data-wasm-opt="3">
+    <style>
+        table {
+            margin: 10px;
+            border-collapse: collapse;
+        }
+
+        td {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #000;
+        }
+
+        td:hover {
+            background-color: silver;
+        }
+
+        td.selected {
+            background-color: darkslategray;
+        }
+
+        td:nth-child(3n) {
+            border-right-width: 2px;
+        }
+
+        td:nth-child(1) {
+            border-left-width: 2px;
+        }
+
+        tr:nth-child(3n) td {
+            border-bottom-width: 2px;
+        }
+
+        tr:nth-child(1) td {
+            border-top-width: 2px;
+        }
+    </style>
+</head>
+
+</html>

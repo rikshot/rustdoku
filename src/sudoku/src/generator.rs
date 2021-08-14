@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::sudoku::solver::alx_solve;
+use super::solver::alx_solve;
 
 use super::grid::Grid;
 

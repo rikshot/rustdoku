@@ -1,9 +1,7 @@
-extern crate rustdoku;
-
 use std::{error::Error, time::Instant};
 
-use rustdoku::sudoku::solver::alx_solve;
-use rustdoku::sudoku::{generator, grid::Grid};
+use rustdoku_sudoku::solver::alx_solve;
+use rustdoku_sudoku::{generator, grid::Grid};
 
 use rayon::prelude::*;
 
@@ -44,7 +42,12 @@ fn solve_single(sudoku: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
 }
 
 fn generate(givens: usize, count: usize) {
-    println!("Generating {} unique sudoku{} with {} givens", count, if count == 1 { "" } else { "s" }, givens);
+    println!(
+        "Generating {} unique sudoku{} with {} givens",
+        count,
+        if count == 1 { "" } else { "s" },
+        givens
+    );
     for _ in 0..count {
         println!("{}", generator::generate(givens));
     }

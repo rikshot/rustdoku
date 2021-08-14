@@ -15,40 +15,56 @@ enum Constraint {
 type ConstraintType = (Constraint, (u8, u8));
 type RCNType = (u8, u8, u8);
 
+lazy_static! {
+    static ref Y: HashMap<RCNType, [ConstraintType; 4]> = {
+        let mut y = HashMap::with_capacity(729);
+        for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
+            let b = r / 3 * 3 + c / 3;
+            y.insert(
+                (r, c, n),
+                [
+                    (Constraint::RC, (r, c)),
+                    (Constraint::RN, (r, n)),
+                    (Constraint::CN, (c, n)),
+                    (Constraint::BN, (b, n)),
+                ],
+            );
+        }
+        y
+    };
+    static ref X: HashMap<ConstraintType, HashSet<RCNType>> = {
+        let x: Vec<ConstraintType> = iproduct!(0..9, 0..9)
+            .map(|rc| (Constraint::RC, rc))
+            .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
+            .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
+            .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)))
+            .collect();
+        let mut exact_cover: HashMap<ConstraintType, HashSet<RCNType>> = HashMap::with_capacity(324);
+        for j in x.iter() {
+            exact_cover.insert(*j, HashSet::with_capacity(9));
+        }
+        for (i, row) in Y.iter() {
+            for j in *row {
+                exact_cover.get_mut(&j).unwrap().insert(*i);
+            }
+        }
+        exact_cover
+    };
+}
+
 pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
-    let x: Vec<ConstraintType> = iproduct!(0..9, 0..9)
-        .map(|rc| (Constraint::RC, rc))
-        .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
-        .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
-        .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)))
-        .collect();
-
-    let mut y = HashMap::with_capacity(729);
-    for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
-        let b = r / 3 * 3 + c / 3;
-        y.insert(
-            (r, c, n),
-            [
-                (Constraint::RC, (r, c)),
-                (Constraint::RN, (r, n)),
-                (Constraint::CN, (c, n)),
-                (Constraint::BN, (b, n)),
-            ],
-        );
-    }
-
-    let mut x = exact_cover(&x, &y);
+    let mut x = X.clone();
 
     for row in 0..9 {
         for column in 0..9 {
             let cell = grid.get(row * 9 + column);
             if cell.value() > 0 {
-                select(&mut x, &y, (row as u8, column as u8, cell.value()));
+                select(&mut x, &Y, (row as u8, column as u8, cell.value()));
             }
         }
     }
 
-    let solutions = solve(&mut x, &y, &mut vec![], limit);
+    let solutions = solve(&mut x, &Y, &mut vec![], limit);
 
     solutions
         .iter()
@@ -60,22 +76,6 @@ pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
             grid
         })
         .collect()
-}
-
-fn exact_cover(
-    x: &[ConstraintType],
-    y: &HashMap<RCNType, [ConstraintType; 4]>,
-) -> HashMap<ConstraintType, HashSet<RCNType>> {
-    let mut ec: HashMap<ConstraintType, HashSet<RCNType>> = HashMap::with_capacity(324);
-    for j in x.iter() {
-        ec.insert(*j, HashSet::with_capacity(9));
-    }
-    for (i, row) in y.iter() {
-        for j in *row {
-            ec.get_mut(&j).unwrap().insert(*i);
-        }
-    }
-    ec
 }
 
 fn solve(

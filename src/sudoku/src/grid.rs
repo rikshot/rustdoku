@@ -1,4 +1,4 @@
-use crate::sudoku::candidates::Candidates;
+use super::candidates::Candidates;
 use itertools::Itertools;
 use std::{error::Error, fmt, str::FromStr};
 use thiserror::Error;
@@ -110,6 +110,10 @@ impl Grid {
         Grid {
             cells: [Cell::new(0); 81],
         }
+    }
+
+    pub fn cells(&self) -> &[Cell; 81] {
+        &self.cells
     }
 
     pub fn get(&self, index: usize) -> &Cell {

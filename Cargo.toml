@@ -1,20 +1,10 @@
-[package]
-name = "rustdoku"
-version = "0.1.0"
-description = "Solves and generates sudokus"
-authors = ["Ville Orkas <ville@orkas.fi>"]
-edition = "2018"
+[workspace]
+members = ["src/cli", "src/sudoku", "src/game"]
+default-members = ["src/sudoku", "src/cli"]
 
 [profile.release]
-opt-level = 3
 lto = "fat"
 codegen-units = 1
+opt-level = 3
 panic = "abort"
 debug = true
-
-[dependencies]
-itertools = "*"
-rayon = "*"
-thiserror = "*"
-clap = "*"
-rand = "*"
