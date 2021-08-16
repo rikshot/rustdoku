@@ -27,6 +27,10 @@ impl Cell {
         &self.candidates
     }
 
+    pub fn frozen(&self) -> bool {
+        self.frozen
+    }
+
     pub fn freeze(&mut self) {
         self.frozen = true;
     }

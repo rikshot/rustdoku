@@ -1,6 +1,6 @@
 [workspace]
-members = ["src/cli", "src/sudoku", "src/game"]
-default-members = ["src/sudoku", "src/cli"]
+members = ["cli", "sudoku", "game"]
+default-members = ["sudoku", "cli"]
 
 [profile.release]
 lto = "fat"

@@ -71,8 +71,11 @@ impl Component for Model {
                 true
             }
             Msg::Select(index) => {
-                self.selected = Some(index);
-                true
+                if !self.grid.get(index).frozen() {
+                    self.selected = Some(index);
+                    return true;
+                }
+                false
             }
             Msg::KeyDown(key) => {
                 if let Ok(digit) = key.parse::<u8>() {
