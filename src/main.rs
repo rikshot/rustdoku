@@ -11,20 +11,27 @@ use clap::{app_from_crate, crate_authors, crate_description, crate_name, crate_v
 
 fn solve_file(path: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
     let sudoku_file = std::fs::read_to_string(path)?;
+    let count = sudoku_file.lines().count();
     println!("Solving '{}'", path);
     let start = Instant::now();
-    sudoku_file
+    let solved: Vec<Result<Vec<Grid>, Box<dyn Error + Sync + Send>>> = sudoku_file
         .par_lines()
-        .try_for_each(|sudoku: &str| -> Result<(), Box<dyn Error + Sync + Send>> {
-            let mut grid: Grid = sudoku.parse()?;
-            let grids = alx_solve(&grid, 0);
-            assert_eq!(grids.len(), 1);
-            grid = grids[0];
-            println!("{} = {} = {}", sudoku, grid, grid.is_valid());
-            Ok(())
-        })?;
+        .map(|sudoku: &str| -> Result<Vec<Grid>, Box<dyn Error + Sync + Send>> {
+            let grid: Grid = sudoku.parse()?;
+            Ok(alx_solve(&grid, 0))
+        }).collect();
     let duration = start.elapsed().as_secs_f32();
-    let count = sudoku_file.lines().count() as f32;
+    for sudoku in &solved {
+        match sudoku {
+            Ok(sudoku) => {
+                for sudoku in sudoku {
+                    println!("{}", sudoku);
+                }
+            },
+            Err(error) => println!("{}", error)
+        };
+    }
+    let count = count as f32;
     println!(
         "Sudokus: {} Duration: {}s, ~{}μs per sudoku",
         count,

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use ahash::{AHashMap, AHashSet};
 
 use itertools::iproduct;
 
@@ -16,8 +16,8 @@ type ConstraintType = (Constraint, (u8, u8));
 type RCNType = (u8, u8, u8);
 
 lazy_static! {
-    static ref Y: HashMap<RCNType, [ConstraintType; 4]> = {
-        let mut y = HashMap::with_capacity(729);
+    static ref Y: AHashMap<RCNType, [ConstraintType; 4]> = {
+        let mut y = AHashMap::with_capacity(729);
         for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
             let b = r / 3 * 3 + c / 3;
             y.insert(
@@ -32,16 +32,16 @@ lazy_static! {
         }
         y
     };
-    static ref X: HashMap<ConstraintType, HashSet<RCNType>> = {
+    static ref X: AHashMap<ConstraintType, AHashSet<RCNType>> = {
         let x: Vec<ConstraintType> = iproduct!(0..9, 0..9)
             .map(|rc| (Constraint::RC, rc))
             .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
             .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
             .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)))
             .collect();
-        let mut exact_cover: HashMap<ConstraintType, HashSet<RCNType>> = HashMap::with_capacity(324);
+        let mut exact_cover: AHashMap<ConstraintType, AHashSet<RCNType>> = AHashMap::with_capacity(324);
         for j in x.iter() {
-            exact_cover.insert(*j, HashSet::with_capacity(9));
+            exact_cover.insert(*j, AHashSet::with_capacity(9));
         }
         for (i, row) in Y.iter() {
             for j in *row {
@@ -79,8 +79,8 @@ pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
 }
 
 fn solve(
-    x: &mut HashMap<ConstraintType, HashSet<RCNType>>,
-    y: &HashMap<RCNType, [ConstraintType; 4]>,
+    x: &mut AHashMap<ConstraintType, AHashSet<RCNType>>,
+    y: &AHashMap<RCNType, [ConstraintType; 4]>,
     solution: &mut Vec<RCNType>,
     limit: usize,
 ) -> Vec<Vec<RCNType>> {
@@ -103,13 +103,15 @@ fn solve(
 }
 
 fn select(
-    x: &mut HashMap<ConstraintType, HashSet<RCNType>>,
-    y: &HashMap<RCNType, [ConstraintType; 4]>,
+    x: &mut AHashMap<ConstraintType, AHashSet<RCNType>>,
+    y: &AHashMap<RCNType, [ConstraintType; 4]>,
     r: RCNType,
-) -> Vec<HashSet<RCNType>> {
-    let mut cols: Vec<HashSet<RCNType>> = vec![];
+) -> Vec<AHashSet<RCNType>> {
+    // This capacity is based on the max length of this vector running against the sudoku17 file
+    let mut cols: Vec<AHashSet<RCNType>> = Vec::with_capacity(4);
     for j in y[&r] {
-        let mut remove_set = vec![];
+        // This capacity is based on the max length of this vector running against the sudoku17 file
+        let mut remove_set = Vec::with_capacity(27);
         for i in &x[&j] {
             for k in y[i] {
                 if k != j {
@@ -126,14 +128,15 @@ fn select(
 }
 
 fn deselect(
-    x: &mut HashMap<ConstraintType, HashSet<RCNType>>,
-    y: &HashMap<RCNType, [ConstraintType; 4]>,
+    x: &mut AHashMap<ConstraintType, AHashSet<RCNType>>,
+    y: &AHashMap<RCNType, [ConstraintType; 4]>,
     r: RCNType,
-    cols: &mut Vec<HashSet<RCNType>>,
+    cols: &mut Vec<AHashSet<RCNType>>,
 ) {
     for j in y[&r].iter().rev() {
         x.insert(*j, cols.pop().unwrap());
-        let mut insert_set = vec![];
+        // This capacity is based on the max length of this vector running against the sudoku17 file
+        let mut insert_set = Vec::with_capacity(24);
         for i in &x[j] {
             for k in y[i] {
                 if k != *j {
