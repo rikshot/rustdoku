@@ -9,34 +9,42 @@ use rayon::prelude::*;
 
 use clap::{app_from_crate, crate_authors, crate_description, crate_name, crate_version, value_t, Arg, SubCommand};
 
-fn solve_file(path: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
+type SolveError = Box<dyn Error + Sync + Send>;
+
+fn solve_file(path: &str) -> Result<(), SolveError> {
     let sudoku_file = std::fs::read_to_string(path)?;
     let count = sudoku_file.lines().count();
-    println!("Solving '{}'", path);
+    println!(
+        "Solving {} sudoku{} from '{}'",
+        count,
+        if count == 1 { "" } else { "s" },
+        path
+    );
     let start = Instant::now();
-    let solved: Vec<Result<Vec<Grid>, Box<dyn Error + Sync + Send>>> = sudoku_file
+    let results: Vec<Result<(Grid, Vec<Grid>), SolveError>> = sudoku_file
         .par_lines()
-        .map(|sudoku: &str| -> Result<Vec<Grid>, Box<dyn Error + Sync + Send>> {
+        .map(|sudoku: &str| -> Result<(Grid, Vec<Grid>), SolveError> {
             let grid: Grid = sudoku.parse()?;
-            Ok(alx_solve(&grid, 0))
-        }).collect();
+            Ok((grid, alx_solve(&grid, 0)))
+        })
+        .collect();
     let duration = start.elapsed().as_secs_f32();
-    for sudoku in &solved {
-        match sudoku {
-            Ok(sudoku) => {
-                for sudoku in sudoku {
-                    println!("{}", sudoku);
+    for result in &results {
+        match result {
+            Ok((grid, solutions)) => {
+                for sudoku in solutions {
+                    println!("{},{}", grid, sudoku);
                 }
-            },
-            Err(error) => println!("{}", error)
+            }
+            Err(error) => println!("{}", error),
         };
     }
-    let count = count as f32;
     println!(
-        "Sudokus: {} Duration: {}s, ~{}μs per sudoku",
+        "Solved {} sudoku{} in {}s, ~{}μs per sudoku",
         count,
+        if count == 1 { "" } else { "s" },
         duration,
-        duration / count * 1000000.0
+        duration / (count as f32) * 1000000.0
     );
     Ok(())
 }
@@ -57,9 +65,23 @@ fn generate(givens: usize, count: usize) {
         if count == 1 { "" } else { "s" },
         givens
     );
-    for _ in 0..count {
-        println!("{}", generator::generate(givens));
+    let start = Instant::now();
+    let generated = (0..count)
+        .into_par_iter()
+        .map(|_| generator::generate(givens))
+        .collect::<Vec<Grid>>();
+    let duration = start.elapsed().as_secs_f32();
+    for sudoku in &generated {
+        println!("{}", sudoku);
     }
+    println!(
+        "Generated {} unique sudoku{} with {} givens in {}s, ~{}μs per sudoku",
+        count,
+        if count == 1 { "" } else { "s" },
+        givens,
+        duration,
+        duration / (count as f32) * 1000000.0
+    );
 }
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {

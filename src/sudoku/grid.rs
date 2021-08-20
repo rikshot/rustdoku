@@ -1,36 +1,8 @@
-use crate::sudoku::candidates::Candidates;
 use itertools::Itertools;
 use std::{error::Error, fmt, str::FromStr};
 use thiserror::Error;
 
-#[derive(Copy, Clone, Debug)]
-pub struct Cell {
-    value: u8,
-    candidates: Candidates,
-    frozen: bool,
-}
-
-impl Cell {
-    pub fn new(value: u8) -> Self {
-        Cell {
-            value,
-            candidates: Candidates::new(value == 0),
-            frozen: false,
-        }
-    }
-
-    pub fn value(&self) -> u8 {
-        self.value
-    }
-
-    pub fn candidates(&self) -> &Candidates {
-        &self.candidates
-    }
-
-    pub fn freeze(&mut self) {
-        self.frozen = true;
-    }
-}
+use super::cell::Cell;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Grid {
@@ -103,7 +75,7 @@ const fn peers() -> [[usize; 20]; 81] {
     peers
 }
 
-static PEERS: [[usize; 20]; 81] = peers();
+pub static PEERS: [[usize; 20]; 81] = peers();
 
 impl Grid {
     pub fn new() -> Self {
@@ -126,17 +98,17 @@ impl Grid {
         assert!(index < 81);
         assert!(value < 10);
         let mut cells = self.cells;
-        if !cells[index].frozen {
+        if !cells[index].frozen() {
             if value > 0 {
                 let cell = Cell::new(value);
                 for peer in PEERS[index] {
                     let peer = &mut cells[peer];
-                    if peer.value == 0 {
-                        peer.candidates.unset((cell.value - 1) as usize);
-                        if peer.candidates.none() {
+                    if peer.value() == 0 {
+                        peer.candidates_mut().unset((cell.value() - 1) as usize);
+                        if peer.candidates().none() {
                             return false;
                         }
-                    } else if cell.value == peer.value {
+                    } else if cell.value() == peer.value() {
                         return false;
                     }
                 }
@@ -146,13 +118,13 @@ impl Grid {
                 let mut cell = Cell::new(0);
                 for peer in PEERS[index] {
                     let peer = &mut cells[peer];
-                    if peer.value > 0 {
-                        cell.candidates.unset(peer.value as usize - 1);
-                        if cell.candidates.none() {
+                    if peer.value() > 0 {
+                        cell.candidates_mut().unset(peer.value() as usize - 1);
+                        if cell.candidates().none() {
                             return false;
                         }
                     } else if old_value > 0 {
-                        peer.candidates.set(old_value as usize - 1);
+                        peer.candidates_mut().set(old_value as usize - 1);
                     }
                 }
                 cells[index] = cell;
@@ -163,17 +135,21 @@ impl Grid {
         false
     }
 
+    pub fn givens(&self) -> usize {
+        self.cells.iter().filter(|cell| cell.frozen()).count()
+    }
+
     pub fn is_complete(&self) -> bool {
-        !self.cells.iter().any(|cell| cell.value == 0)
+        !self.cells.iter().any(|cell| cell.value() == 0)
     }
 
     pub fn is_valid(&self) -> bool {
         !self.cells.iter().enumerate().any(|(index, cell)| {
-            cell.value > 0
+            cell.value() > 0
                 && PEERS[index]
                     .iter()
                     .map(|peer| &self.cells[*peer])
-                    .any(|peer| peer.value > 0 && peer.value == cell.value)
+                    .any(|peer| peer.value() > 0 && peer.value() == cell.value())
         })
     }
 }
@@ -186,7 +162,7 @@ impl Default for Grid {
 
 impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.cells.iter().map(|cell| cell.value.to_string()).join(""))
+        write!(f, "{}", self.cells.iter().map(|cell| cell.value().to_string()).join(""))
     }
 }
 
@@ -195,7 +171,7 @@ impl PartialEq for Grid {
         self.cells
             .iter()
             .zip(other.cells.iter())
-            .all(|(a, b)| a.value == b.value)
+            .all(|(a, b)| a.value() == b.value())
     }
 }
 
@@ -218,8 +194,8 @@ impl FromStr for Grid {
                 return Err(Box::new(ParseError::InvalidSudoku(index)));
             }
             let cell = &mut grid.cells[index];
-            if cell.value != 0 {
-                cell.frozen = true;
+            if cell.value() != 0 {
+                cell.freeze()
             }
         }
         Ok(grid)
