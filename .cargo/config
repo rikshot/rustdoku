@@ -1,3 +1,6 @@
 [build]
 rustc-wrapper = "sccache"
-rustflags = "-C target-cpu=native --cfg=web_sys_unstable_apis"
+rustflags = "-C target-cpu=native"
+
+[target.wasm32-unknown-unknown]
+rustflags = "--cfg=web_sys_unstable_apis"

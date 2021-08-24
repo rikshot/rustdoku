@@ -33,15 +33,14 @@ lazy_static! {
         y
     };
     static ref X: AHashMap<ConstraintType, AHashSet<RCNType>> = {
-        let x: Vec<ConstraintType> = iproduct!(0..9, 0..9)
+        let x = iproduct!(0..9, 0..9)
             .map(|rc| (Constraint::RC, rc))
             .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
             .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
-            .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)))
-            .collect();
+            .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)));
         let mut exact_cover: AHashMap<ConstraintType, AHashSet<RCNType>> = AHashMap::with_capacity(324);
-        for j in x.iter() {
-            exact_cover.insert(*j, AHashSet::with_capacity(9));
+        for j in x {
+            exact_cover.insert(j, AHashSet::with_capacity(9));
         }
         for (i, row) in Y.iter() {
             for j in *row {

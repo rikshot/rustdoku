@@ -3,7 +3,7 @@ use gloo_events::EventListener;
 use rustdoku_sudoku::{generator, grid::Grid, solver::alx_solve};
 use wasm_bindgen::JsCast;
 use web_sys::window;
-use yew::{prelude::*, utils::document, virtual_dom::VTag};
+use yew::{prelude::*, utils::document};
 
 enum Msg {
     Clear,
@@ -67,6 +67,7 @@ impl Component for Model {
                 }
             }
             Msg::Generate => {
+                self.selected = None;
                 self.grid = generator::generate(self.givens);
                 true
             }
@@ -107,29 +108,21 @@ impl Component for Model {
     }
 
     fn view(&self) -> Html {
-        let rows = (0..9)
-            .map(|row| {
-                let mut element = VTag::new("tr");
-                (0..9).for_each(|column| {
-                    let index = row * 9 + column;
-                    let value = self.grid.get(index).value();
-                    let value = char::from_digit(value.into(), 10).unwrap();
-                    let value = if value == '0' { "".to_owned() } else { value.to_string() };
-                    let selected = if self.selected.is_some() && self.selected.unwrap() == index {
-                        classes!("selected")
-                    } else {
-                        classes!()
-                    };
-                    let onclick = self.link.callback(move |_| Msg::Select(index));
-                    element.add_child(html! { <td class=selected onclick={onclick}>{value}</td> })
-                });
-                element
-            })
-            .collect::<Html>();
+        let cells = self.grid.cells().iter().enumerate().map(|(index,cell)| {
+            let value = char::from_digit(cell.value().into(), 10).unwrap();
+            let value = if value == '0' { "".to_owned() } else { value.to_string() };
+            let selected = if self.selected.is_some() && self.selected.unwrap() == index {
+                Some("selected")
+            } else {
+                None
+            };
+            let onclick = self.link.callback(move |_| Msg::Select(index));
+            html! { <div class=classes!("cell", selected) onclick={onclick}>{value}</div> }
+        });
 
         html! {
             <main>
-                <div>
+                <section>
                     <h1>{"Sudoku"}</h1>
                     <div>
                         <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
@@ -142,14 +135,10 @@ impl Component for Model {
                     <div>
                         <button onclick=self.link.callback(|_| Msg::Copy)>{"Copy"}</button>
                     </div>
-                </div>
-                <div>
-                    <table>
-                        <tbody>
-                            {rows}
-                        </tbody>
-                    </table>
-                </div>
+                </section>
+                <section class="grid">
+                    { for cells }
+                </section>
             </main>
         }
     }
