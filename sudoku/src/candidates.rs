@@ -34,6 +34,10 @@ impl Candidates {
         self.value &= !(1 << candidate);
     }
 
+    pub fn toggle(&mut self, candidate: usize) {
+        self.value ^= 1 << candidate;
+    }
+
     pub fn some(self) -> bool {
         self.value > 0
     }
@@ -71,6 +75,16 @@ mod tests {
         c.set(4);
         assert!(!c.get(0));
         assert!(c.get(4));
+    }
+
+    #[test]
+    fn toggle_test() {
+        let mut c = Candidates::new(true);
+        c.toggle(8);
+        assert!(!c.get(8));
+        c.toggle(8);
+        assert!(c.get(8));
+        assert_eq!(c.value(), 511);
     }
 
     #[test]

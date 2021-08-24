@@ -14,6 +14,15 @@ enum Msg {
     Export,
     Givens(usize),
     Candidates(ChangeData),
+    InputType(InputType),
+    ValueChange(usize),
+    CandidateToggle(usize)
+}
+
+#[derive(PartialEq)]
+enum InputType {
+    Values,
+    Candidates,
 }
 
 struct Model {
@@ -21,6 +30,7 @@ struct Model {
     grid: Grid,
     givens: usize,
     candidates: bool,
+    input_type: InputType,
     selected: Option<usize>,
     #[allow(dead_code)]
     key_listener: EventListener,
@@ -47,6 +57,7 @@ impl Component for Model {
             givens: default_givens,
             candidates: false,
             selected: None,
+            input_type: InputType::Values,
             key_listener,
         }
     }
@@ -117,14 +128,30 @@ impl Component for Model {
                 self.givens = givens;
                 false
             }
-            Msg::Candidates(data) => {
-                match data {
-                    ChangeData::Value(string) => {
-                        self.candidates = string == "false";
-                        true
-                    },
-                    _ => false
+            Msg::Candidates(data) => match data {
+                ChangeData::Value(string) => {
+                    self.candidates = string == "false";
+                    true
                 }
+                _ => false,
+            },
+            Msg::InputType(input_type) => {
+                self.input_type = input_type;
+                true
+            }
+            Msg::ValueChange(value) => {
+                if let Some(selected) = self.selected {
+                    self.grid.set_checked(selected, value as u8);
+                    return true;
+                }
+                false
+            }
+            Msg::CandidateToggle(candidate) => {
+                if let Some(selected) = self.selected {
+                    self.grid.candidates_mut(selected).toggle(candidate - 1);
+                    return true;
+                }
+                false
             }
         }
     }
@@ -187,8 +214,52 @@ impl Component for Model {
                         </div>
                     </div>
                 </header>
-                <section class="grid">
+                <section id="grid">
                     { for cells }
+                </section>
+                <section id="inputs">
+                    <div id="input_type">
+                        <input type="radio" id="value_input" name="input_type" value="values" checked={self.input_type == InputType::Values} onchange=self.link.callback(|_| Msg::InputType(InputType::Values)) />
+                        <label for="value_input">{"Value"}</label>
+                        <input type="radio" id="candidate_input" name="input_type" value="candidates" checked={self.input_type == InputType::Candidates} onchange=self.link.callback(|_| Msg::InputType(InputType::Candidates)) />
+                        <label for="candidate_input">{"Candidate"}</label>
+                    </div>
+                    <div id="value_inputs" class={ if self.input_type == InputType::Values { classes!("active") } else { classes!() }}>
+                        { for (1..=9_usize).map(|i| {
+                            let is = char::from_digit(i as u32, 10).unwrap().to_string();
+                            let id = format!("value_{}", i);
+                            let checked = if let Some(selected) = self.selected {
+                                self.grid.get(selected) == i as u8
+                            } else {
+                                false
+                            };
+                            html! { <>
+                                <input type="radio" name="value" id={id} value={is.clone()} onchange=self.link.callback(move |_| Msg::ValueChange(i)) checked={checked} />
+                                <label for={is.clone()}>{is.clone()}</label>
+                            </> }
+                        }) }
+                        <input type="radio" name="value" id="value_0" value="0" onchange=self.link.callback(move |_| Msg::ValueChange(0)) checked={ if let Some(selected) = self.selected {
+                            self.grid.get(selected) == 0
+                        } else {
+                            false
+                        }}/>
+                        <label for="value_0">{"0"}</label>
+                    </div>
+                    <div id="candidate_inputs" class={ if self.input_type == InputType::Candidates { classes!("active") } else { classes!() }}>
+                        { for (1..=9_usize).map(|i| {
+                            let is = char::from_digit(i as u32, 10).unwrap().to_string();
+                            let id = format!("candidate_{}", i);
+                            let checked = if let Some(selected) = self.selected {
+                                self.grid.candidates(selected).get(i - 1)
+                            } else {
+                                false
+                            };
+                            html! { <>
+                                <input type="checkbox" name="candidate" id={id} value={is.clone()} onchange=self.link.callback(move |_| Msg::CandidateToggle(i)) checked={checked} />
+                                <label for={is.clone()}>{is.clone()}</label>
+                            </> }
+                        }) }
+                    </div>
                 </section>
             </main>
         }

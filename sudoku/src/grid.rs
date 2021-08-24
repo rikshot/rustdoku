@@ -170,6 +170,11 @@ impl Grid {
         &self.cells[index].candidates
     }
 
+    pub fn candidates_mut(&mut self, index: usize) -> &mut Candidates {
+        assert!(index < 81);
+        &mut self.cells[index].candidates
+    }
+
     pub fn freeze(&mut self, index: usize) {
         assert!(index < 81);
         self.cells[index].frozen = true;

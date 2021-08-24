@@ -22,7 +22,7 @@ h1 {
     font-size: small;
 }
 
-.grid {
+#grid {
     display: grid;
     grid-template-columns: repeat(9, 40px);
     grid-template-rows: repeat(9, 40px);
@@ -67,4 +67,29 @@ h1 {
 .candidate {
     font-size: x-small;
     color: lightgrey;
+}
+
+#inputs {
+    text-align: center;
+}
+
+#inputs * {
+    margin: 2px;
+    font-size: small;
+}
+
+#value_inputs {
+    display: none;
+}
+
+#value_inputs.active {
+    display: initial;
+}
+
+#candidate_inputs {
+    display: none;
+}
+
+#candidate_inputs.active {
+    display: initial;
 }
