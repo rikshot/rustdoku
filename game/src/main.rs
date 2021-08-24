@@ -1,5 +1,4 @@
 use gloo_events::EventListener;
-
 use rustdoku_sudoku::{generator, grid::Grid, solver::alx_solve};
 use wasm_bindgen::JsCast;
 use web_sys::window;
@@ -14,12 +13,14 @@ enum Msg {
     Import,
     Export,
     Givens(usize),
+    Candidates(ChangeData),
 }
 
 struct Model {
     link: ComponentLink<Self>,
     grid: Grid,
     givens: usize,
+    candidates: bool,
     selected: Option<usize>,
     #[allow(dead_code)]
     key_listener: EventListener,
@@ -44,6 +45,7 @@ impl Component for Model {
             link,
             grid: generator::generate(default_givens),
             givens: default_givens,
+            candidates: false,
             selected: None,
             key_listener,
         }
@@ -83,7 +85,7 @@ impl Component for Model {
             Msg::KeyDown(key) => {
                 if let Ok(digit) = key.parse::<u8>() {
                     if let Some(selected) = self.selected {
-                        self.grid.set(selected, digit);
+                        self.grid.set_checked(selected, digit);
                         return true;
                     }
                 } else if key == "Escape" {
@@ -115,6 +117,15 @@ impl Component for Model {
                 self.givens = givens;
                 false
             }
+            Msg::Candidates(data) => {
+                match data {
+                    ChangeData::Value(string) => {
+                        self.candidates = string == "false";
+                        true
+                    },
+                    _ => false
+                }
+            }
         }
     }
 
@@ -124,34 +135,58 @@ impl Component for Model {
 
     fn view(&self) -> Html {
         let cells = self.grid.cells().enumerate().map(|(index, cell)| {
-            let value = char::from_digit(cell.into(), 10).unwrap();
-            let value = if value == '0' { "".to_owned() } else { value.to_string() };
             let selected = if self.selected.is_some() && self.selected.unwrap() == index {
                 Some("selected")
             } else {
                 None
             };
             let onclick = self.link.callback(move |_| Msg::Select(index));
-            html! { <div class=classes!("cell", selected) onclick={onclick}>{value}</div> }
+
+            if cell > 0 {
+                let value = char::from_digit(cell.into(), 10).unwrap().to_string();
+                html! { <div class=classes!("cell", selected) onclick={onclick}>{value}</div> }
+            } else if self.candidates {
+                let candidates = self.grid.candidates(index);
+                let candidates = (0..9).map(|candidate| {
+                    if candidates.get(candidate) {
+                        html! { <div class="candidate">{candidate + 1}</div> }
+                    } else {
+                        html! { <div class="candidate"></div> }
+                    }
+                });
+                html! {
+                    <div class=classes!("cell", selected) onclick={onclick}>
+                        <div class="candidates">{ for candidates }</div>
+                    </div>
+                }
+            } else {
+                html! { <div class=classes!("cell", selected) onclick={onclick}></div> }
+            }
         });
 
         html! {
             <main>
-                <section>
-                    <h1>{"Sudoku"}</h1>
-                    <div>
-                        <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
-                        <button onclick=self.link.callback(|_| Msg
-                        ::Solve)>{"Solve"}</button>
-                        <button onclick=self.link.callback(|_| Msg
-                        ::Generate)>{"Generate"}</button>
-                        <input type="number" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
+                <header>
+                    <h1>{"Rustdoku"}</h1>
+                    <div id="controls">
+                        <div>
+                            <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
+                            <button onclick=self.link.callback(|_| Msg
+                            ::Solve)>{"Solve"}</button>
+                            <button onclick=self.link.callback(|_| Msg
+                            ::Generate)>{"Generate"}</button>
+                            <input type="number" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
+                        </div>
+                        <div>
+                            <input type="checkbox" id="candidates" checked={self.candidates} onchange=self.link.callback(Msg::Candidates) value={self.candidates.to_string()} />
+                            <label for="candidates">{"Candidates"}</label>
+                        </div>
+                        <div>
+                            <button onclick=self.link.callback(|_| Msg::Import)>{"Import"}</button>
+                            <button onclick=self.link.callback(|_| Msg::Export)>{"Export"}</button>
+                        </div>
                     </div>
-                    <div>
-                        <button onclick=self.link.callback(|_| Msg::Import)>{"Import"}</button>
-                        <button onclick=self.link.callback(|_| Msg::Export)>{"Export"}</button>
-                    </div>
-                </section>
+                </header>
                 <section class="grid">
                     { for cells }
                 </section>

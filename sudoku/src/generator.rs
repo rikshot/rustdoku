@@ -41,8 +41,12 @@ pub fn generate(givens: usize) -> Grid {
         if stuck {
             continue;
         }
-        for index in not_removed {
-            grid.freeze(index);
+        for index in 0..81 {
+            if not_removed.contains(&index) {
+                grid.freeze(index);
+            } else {
+                grid.set_checked(index, 0);
+            }
         }
         break grid;
     }

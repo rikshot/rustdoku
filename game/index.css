@@ -1,19 +1,38 @@
 main {
     margin: 0 auto;
     font-family: sans-serif;
+    max-width: 380px;
+}
+
+header {
+    overflow: auto;
+    text-align: center;
+}
+
+h1 {
+    margin: 10px auto;
+}
+
+#controls {
+    margin: 10px auto;
+}
+
+#controls * {
+    margin: 2px;
+    font-size: small;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(9, 30px);
-    grid-template-rows: repeat(9, 30px);
-    margin: 10px;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
+    justify-content: center;
 }
 
 .cell {
     background-color: beige;
     text-align: center;
-    line-height: 30px;
+    line-height: 40px;
     border: 1px solid lightgrey;
 }
 
@@ -35,4 +54,17 @@ main {
 
 .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) {
     border-bottom: 2px solid lightgrey;
+}
+
+.candidates {
+    display: grid;
+    grid-template-columns: repeat(3, 10px);
+    grid-template-rows: repeat(3, 10px);
+    justify-content: center;
+    line-height: 20px;
+}
+
+.candidate {
+    font-size: x-small;
+    color: lightgrey;
 }
