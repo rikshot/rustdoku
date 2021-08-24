@@ -7,13 +7,10 @@ main {
 header {
     overflow: auto;
     text-align: center;
-}
-
-h1 {
     margin: 10px auto;
 }
 
-#controls {
+h1 {
     margin: 10px auto;
 }
 
@@ -27,6 +24,7 @@ h1 {
     grid-template-columns: repeat(9, 40px);
     grid-template-rows: repeat(9, 40px);
     justify-content: center;
+    margin: 10px auto;
 }
 
 .cell {
@@ -71,6 +69,7 @@ h1 {
 
 #inputs {
     text-align: center;
+    margin: 10px auto;
 }
 
 #inputs * {

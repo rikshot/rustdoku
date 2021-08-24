@@ -1,8 +1,7 @@
-use gloo_events::EventListener;
 use rustdoku_sudoku::{generator, grid::Grid, solver::alx_solve};
-use wasm_bindgen::JsCast;
+
 use web_sys::window;
-use yew::{prelude::*, utils::document};
+use yew::prelude::*;
 
 enum Msg {
     Clear,
@@ -32,8 +31,6 @@ struct Model {
     candidates: bool,
     input_type: InputType,
     selected: Option<usize>,
-    #[allow(dead_code)]
-    key_listener: EventListener,
 }
 
 impl Component for Model {
@@ -41,14 +38,6 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let key_listener = {
-            let link = link.clone();
-            EventListener::new(&document(), "keydown", move |event| {
-                let event: &KeyboardEvent = event.unchecked_ref();
-                link.send_message(Msg::KeyDown(event.key()))
-            })
-        };
-
         let default_givens = 28;
 
         Self {
@@ -58,7 +47,6 @@ impl Component for Model {
             candidates: false,
             selected: None,
             input_type: InputType::Values,
-            key_listener,
         }
     }
 
@@ -167,11 +155,16 @@ impl Component for Model {
             } else {
                 None
             };
+
             let onclick = self.link.callback(move |_| Msg::Select(index));
+            let onfocus = self.link.callback(move |_| Msg::Select(index));
+            let onkeydown = self.link.callback(|event: KeyboardEvent| {
+                Msg::KeyDown(event.key())
+            });
 
             if cell > 0 {
                 let value = char::from_digit(cell.into(), 10).unwrap().to_string();
-                html! { <div class=classes!("cell", selected) onclick={onclick}>{value}</div> }
+                html! { <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>{value}</div> }
             } else if self.candidates {
                 let candidates = self.grid.candidates(index);
                 let candidates = (0..9).map(|candidate| {
@@ -182,12 +175,12 @@ impl Component for Model {
                     }
                 });
                 html! {
-                    <div class=classes!("cell", selected) onclick={onclick}>
+                    <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>
                         <div class="candidates">{ for candidates }</div>
                     </div>
                 }
             } else {
-                html! { <div class=classes!("cell", selected) onclick={onclick}></div> }
+                html! { <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}></div> }
             }
         });
 
@@ -202,7 +195,8 @@ impl Component for Model {
                             ::Solve)>{"Solve"}</button>
                             <button onclick=self.link.callback(|_| Msg
                             ::Generate)>{"Generate"}</button>
-                            <input type="number" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
+                            <input type="number" id="givens" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
+                            <label for="givens">{"Givens"}</label>
                         </div>
                         <div>
                             <input type="checkbox" id="candidates" checked={self.candidates} onchange=self.link.callback(Msg::Candidates) value={self.candidates.to_string()} />
@@ -234,8 +228,8 @@ impl Component for Model {
                                 false
                             };
                             html! { <>
-                                <input type="radio" name="value" id={id} value={is.clone()} onchange=self.link.callback(move |_| Msg::ValueChange(i)) checked={checked} />
-                                <label for={is.clone()}>{is.clone()}</label>
+                                <input type="radio" name="value" id={id.clone()} value={is.clone()} onchange=self.link.callback(move |_| Msg::ValueChange(i)) checked={checked} />
+                                <label for={id.clone()}>{is.clone()}</label>
                             </> }
                         }) }
                         <input type="radio" name="value" id="value_0" value="0" onchange=self.link.callback(move |_| Msg::ValueChange(0)) checked={ if let Some(selected) = self.selected {
@@ -255,8 +249,8 @@ impl Component for Model {
                                 false
                             };
                             html! { <>
-                                <input type="checkbox" name="candidate" id={id} value={is.clone()} onchange=self.link.callback(move |_| Msg::CandidateToggle(i)) checked={checked} />
-                                <label for={is.clone()}>{is.clone()}</label>
+                                <input type="checkbox" name="candidate" id={id.clone()} value={is.clone()} onchange=self.link.callback(move |_| Msg::CandidateToggle(i)) checked={checked} />
+                                <label for={id.clone()}>{is.clone()}</label>
                             </> }
                         }) }
                     </div>
