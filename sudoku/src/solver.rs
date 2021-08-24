@@ -56,9 +56,9 @@ pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
 
     for row in 0..9 {
         for column in 0..9 {
-            let cell = grid.get(row * 9 + column);
-            if cell.value() > 0 {
-                select(&mut x, &Y, (row as u8, column as u8, cell.value()));
+            let value = grid.get(row * 9 + column);
+            if value > 0 {
+                select(&mut x, &Y, (row as u8, column as u8, value));
             }
         }
     }

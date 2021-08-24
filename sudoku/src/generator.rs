@@ -23,7 +23,7 @@ pub fn generate(givens: usize) -> Grid {
             let mut tried = AHashSet::new();
             loop {
                 let index = *not_removed.iter().choose(&mut rng).unwrap();
-                let old_value = grid.get(index).value();
+                let old_value = grid.get(index);
                 grid.set(index, 0);
                 if alx_solve(&grid, 2).len() == 1 {
                     not_removed.remove(&index);
@@ -42,7 +42,7 @@ pub fn generate(givens: usize) -> Grid {
             continue;
         }
         for index in not_removed {
-            grid.get_mut(index).freeze();
+            grid.freeze(index);
         }
         break grid;
     }

@@ -11,7 +11,8 @@ enum Msg {
     Generate,
     Select(usize),
     KeyDown(String),
-    Copy,
+    Import,
+    Export,
     Givens(usize),
 }
 
@@ -37,10 +38,12 @@ impl Component for Model {
             })
         };
 
+        let default_givens = 28;
+
         Self {
             link,
-            grid: Grid::new(),
-            givens: 28,
+            grid: generator::generate(default_givens),
+            givens: default_givens,
             selected: None,
             key_listener,
         }
@@ -53,12 +56,11 @@ impl Component for Model {
                 true
             }
             Msg::Solve => {
-                let solutions = alx_solve(&self.grid, 0);
+                let solutions = alx_solve(&self.grid, 2);
                 if solutions.is_empty() {
                     gloo_dialogs::alert("No solution found");
                     false
                 } else if solutions.len() == 1 {
-                    log::info!("{}", solutions[0]);
                     self.grid = solutions[0];
                     true
                 } else {
@@ -72,7 +74,7 @@ impl Component for Model {
                 true
             }
             Msg::Select(index) => {
-                if !self.grid.get(index).frozen() {
+                if !self.grid.frozen(index) {
                     self.selected = Some(index);
                     return true;
                 }
@@ -90,10 +92,23 @@ impl Component for Model {
                 }
                 false
             }
+            Msg::Import => {
+                if let Some(sudoku) = gloo_dialogs::prompt("Insert sudoku in 00001002... format", None) {
+                    match sudoku.parse() {
+                        Ok(sudoku) => {
+                            self.grid = sudoku;
+                            return true;
+                        }
+                        Err(error) => gloo_dialogs::alert(&format!("{}", error)),
+                    }
+                }
+                false
+            }
             #[allow(unused_must_use)]
-            Msg::Copy => {
+            Msg::Export => {
                 let clipboard = window().unwrap().navigator().clipboard().unwrap();
                 clipboard.write_text(&format!("{}", self.grid));
+                gloo_dialogs::alert("Sudoku exported to clipboard");
                 false
             }
             Msg::Givens(givens) => {
@@ -108,8 +123,8 @@ impl Component for Model {
     }
 
     fn view(&self) -> Html {
-        let cells = self.grid.cells().iter().enumerate().map(|(index,cell)| {
-            let value = char::from_digit(cell.value().into(), 10).unwrap();
+        let cells = self.grid.cells().enumerate().map(|(index, cell)| {
+            let value = char::from_digit(cell.into(), 10).unwrap();
             let value = if value == '0' { "".to_owned() } else { value.to_string() };
             let selected = if self.selected.is_some() && self.selected.unwrap() == index {
                 Some("selected")
@@ -133,7 +148,8 @@ impl Component for Model {
                         <input type="number" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
                     </div>
                     <div>
-                        <button onclick=self.link.callback(|_| Msg::Copy)>{"Copy"}</button>
+                        <button onclick=self.link.callback(|_| Msg::Import)>{"Import"}</button>
+                        <button onclick=self.link.callback(|_| Msg::Export)>{"Export"}</button>
                     </div>
                 </section>
                 <section class="grid">

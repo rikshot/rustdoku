@@ -2,7 +2,24 @@ use itertools::Itertools;
 use std::{error::Error, fmt, str::FromStr};
 use thiserror::Error;
 
-use super::cell::Cell;
+use super::candidates::Candidates;
+
+#[derive(Clone, Copy, Debug)]
+struct Cell {
+    pub value: u8,
+    pub candidates: Candidates,
+    pub frozen: bool,
+}
+
+impl Cell {
+    pub fn new(value: u8) -> Self {
+        Cell {
+            value,
+            candidates: Candidates::new(value == 0),
+            frozen: false,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Grid {
@@ -84,51 +101,60 @@ impl Grid {
         }
     }
 
-    pub fn cells(&self) -> &[Cell; 81] {
-        &self.cells
+    pub fn cells(&'_ self) -> impl Iterator<Item = u8> + '_ {
+        self.cells.iter().map(|cell| cell.value)
     }
 
-    pub fn get(&self, index: usize) -> &Cell {
+    pub fn get(&self, index: usize) -> u8 {
         assert!(index < 81);
-        &self.cells[index]
+        self.cells[index].value
     }
 
-    pub fn get_mut(&mut self, index: usize) -> &mut Cell {
+    pub fn set(&mut self, index: usize, value: u8) {
         assert!(index < 81);
-        &mut self.cells[index]
+        assert!(value < 10);
+        let cell = &mut self.cells[index];
+        if !cell.frozen {
+            cell.value = value;
+            if value > 0 {
+                cell.candidates.unset_all();
+            } else {
+                cell.candidates.set_all();
+            }
+        }
     }
 
-    pub fn set(&mut self, index: usize, value: u8) -> bool {
+    pub fn set_checked(&mut self, index: usize, value: u8) -> bool {
         assert!(index < 81);
         assert!(value < 10);
         let mut cells = self.cells;
-        if !cells[index].frozen() {
+        if !cells[index].frozen {
             if value > 0 {
                 let cell = Cell::new(value);
                 for peer in PEERS[index] {
                     let peer = &mut cells[peer];
-                    if peer.value() == 0 {
-                        peer.candidates_mut().unset((cell.value() - 1) as usize);
-                        if peer.candidates().none() {
+                    if peer.value == 0 {
+                        peer.candidates.unset((cell.value - 1) as usize);
+                        if peer.candidates.none() {
                             return false;
                         }
-                    } else if cell.value() == peer.value() {
+                    } else if cell.value == peer.value {
                         return false;
                     }
                 }
                 cells[index] = cell;
             } else {
-                let old_value = cells[index].value();
+                let old_value = cells[index].value;
                 let mut cell = Cell::new(0);
                 for peer in PEERS[index] {
                     let peer = &mut cells[peer];
-                    if peer.value() > 0 {
-                        cell.candidates_mut().unset(peer.value() as usize - 1);
-                        if cell.candidates().none() {
+                    if peer.value > 0 {
+                        cell.candidates.unset(peer.value as usize - 1);
+                        if cell.candidates.none() {
                             return false;
                         }
                     } else if old_value > 0 {
-                        peer.candidates_mut().set(old_value as usize - 1);
+                        peer.candidates.set(old_value as usize - 1);
                     }
                 }
                 cells[index] = cell;
@@ -139,21 +165,31 @@ impl Grid {
         false
     }
 
+    pub fn freeze(&mut self, index: usize) {
+        assert!(index < 81);
+        self.cells[index].frozen = true;
+    }
+
+    pub fn frozen(&self, index: usize) -> bool {
+        assert!(index < 81);
+        self.cells[index].frozen
+    }
+
     pub fn givens(&self) -> usize {
-        self.cells.iter().filter(|cell| cell.frozen()).count()
+        self.cells.iter().filter(|cell| cell.frozen).count()
     }
 
     pub fn is_complete(&self) -> bool {
-        !self.cells.iter().any(|cell| cell.value() == 0)
+        !self.cells.iter().any(|cell| cell.value == 0)
     }
 
     pub fn is_valid(&self) -> bool {
         !self.cells.iter().enumerate().any(|(index, cell)| {
-            cell.value() > 0
+            cell.value > 0
                 && PEERS[index]
                     .iter()
                     .map(|peer| &self.cells[*peer])
-                    .any(|peer| peer.value() > 0 && peer.value() == cell.value())
+                    .any(|peer| peer.value > 0 && peer.value == cell.value)
         })
     }
 }
@@ -166,7 +202,7 @@ impl Default for Grid {
 
 impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.cells.iter().map(|cell| cell.value().to_string()).join(""))
+        write!(f, "{}", self.cells.iter().map(|cell| cell.value.to_string()).join(""))
     }
 }
 
@@ -175,7 +211,7 @@ impl PartialEq for Grid {
         self.cells
             .iter()
             .zip(other.cells.iter())
-            .all(|(a, b)| a.value() == b.value())
+            .all(|(a, b)| a.value == b.value)
     }
 }
 
@@ -194,12 +230,12 @@ impl FromStr for Grid {
         let mut grid = Grid::new();
         for (index, c) in string.char_indices() {
             let value = c.to_digit(10).ok_or(ParseError::InvalidDigit(c, index))? as u8;
-            if !grid.set(index, value) {
+            if !grid.set_checked(index, value) {
                 return Err(Box::new(ParseError::InvalidSudoku(index)));
             }
             let cell = &mut grid.cells[index];
-            if cell.value() != 0 {
-                cell.freeze()
+            if cell.value != 0 {
+                cell.frozen = true;
             }
         }
         Ok(grid)
