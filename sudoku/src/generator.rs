@@ -1,3 +1,5 @@
+use crate::grid::{BOXES, COLUMNS, ROWS};
+
 use super::grid::Grid;
 use super::solver::alx_solve;
 
@@ -6,16 +8,22 @@ use rand::prelude::IteratorRandom;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
+fn seed_grid() -> Grid {
+    let mut rng = thread_rng();
+    let mut grid = Grid::new();
+    let mut indices = *[&ROWS, &COLUMNS, &BOXES].iter().choose(&mut rng).unwrap().choose(&mut rng).unwrap();
+    indices.shuffle(&mut rng);
+    for (n, index) in indices.iter().enumerate() {
+        grid.set(*index, n as u8 + 1);
+    }
+    grid
+}
+
 pub fn generate(givens: usize) -> Grid {
     assert!((17..=81).contains(&givens), "Givens must be between 17 and 81");
     let mut rng = thread_rng();
     loop {
-        let mut grid = Grid::new();
-        let mut seed = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-        seed.shuffle(&mut rng);
-        for (i, n) in seed.iter().enumerate() {
-            grid.set(i, *n as u8);
-        }
+        let mut grid = seed_grid();
         grid = alx_solve(&grid, 1)[0];
         let mut not_removed = (0..81).collect::<AHashSet<usize>>();
         let mut stuck = false;

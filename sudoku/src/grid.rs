@@ -38,7 +38,10 @@ const fn insert<const N: usize>(mut array: [usize; N], value: usize) -> [usize; 
     array
 }
 
-const fn peers() -> [[usize; 20]; 81] {
+type SudokuIndices = [[usize; 9]; 9];
+type PeerIndices = [[usize; 20]; 81];
+
+const fn indices() -> (SudokuIndices, SudokuIndices, SudokuIndices, PeerIndices) {
     let mut rows = [[0; 9]; 9];
     let mut columns = [[0; 9]; 9];
     let mut boxes = [[0; 9]; 9];
@@ -89,10 +92,14 @@ const fn peers() -> [[usize; 20]; 81] {
         index += 1;
     }
 
-    peers
+    (rows, columns, boxes, peers)
 }
 
-pub static PEERS: [[usize; 20]; 81] = peers();
+static INDICES: (SudokuIndices, SudokuIndices, SudokuIndices, PeerIndices) = indices();
+pub static ROWS: SudokuIndices = INDICES.0;
+pub static COLUMNS: SudokuIndices = INDICES.1;
+pub static BOXES: SudokuIndices = INDICES.2;
+pub static PEERS: PeerIndices = INDICES.3;
 
 impl Grid {
     pub fn new() -> Self {
