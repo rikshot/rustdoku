@@ -96,10 +96,10 @@ const fn indices() -> (SudokuIndices, SudokuIndices, SudokuIndices, PeerIndices)
 }
 
 static INDICES: (SudokuIndices, SudokuIndices, SudokuIndices, PeerIndices) = indices();
-pub static ROWS: SudokuIndices = INDICES.0;
-pub static COLUMNS: SudokuIndices = INDICES.1;
-pub static BOXES: SudokuIndices = INDICES.2;
-pub static PEERS: PeerIndices = INDICES.3;
+pub static ROWS: &SudokuIndices = &INDICES.0;
+pub static COLUMNS: &SudokuIndices = &INDICES.1;
+pub static BOXES: &SudokuIndices = &INDICES.2;
+pub static PEERS: &PeerIndices = &INDICES.3;
 
 impl Grid {
     pub fn new() -> Self {
@@ -117,59 +117,61 @@ impl Grid {
         self.cells[index].value
     }
 
-    pub fn set(&mut self, index: usize, value: u8) {
+    pub fn set(&mut self, index: usize, value: u8, checked: bool) -> bool {
         assert!(index < 81);
         assert!(value < 10);
-        let cell = &mut self.cells[index];
+        let mut cell = &mut self.cells[index];
         if !cell.frozen {
             cell.value = value;
+            if checked {
+                return self.update_candidates(index);
+            }
             if value > 0 {
                 cell.candidates.unset_all();
             } else {
                 cell.candidates.set_all();
             }
-        }
-    }
-
-    pub fn set_checked(&mut self, index: usize, value: u8) -> bool {
-        assert!(index < 81);
-        assert!(value < 10);
-        let mut cells = self.cells;
-        if !cells[index].frozen {
-            if value > 0 {
-                let cell = Cell::new(value);
-                for peer in PEERS[index] {
-                    let peer = &mut cells[peer];
-                    if peer.value == 0 {
-                        peer.candidates.unset((cell.value - 1) as usize);
-                        if peer.candidates.none() {
-                            return false;
-                        }
-                    } else if cell.value == peer.value {
-                        return false;
-                    }
-                }
-                cells[index] = cell;
-            } else {
-                let old_value = cells[index].value;
-                let mut cell = Cell::new(0);
-                for peer in PEERS[index] {
-                    let peer = &mut cells[peer];
-                    if peer.value > 0 {
-                        cell.candidates.unset(peer.value as usize - 1);
-                        if cell.candidates.none() {
-                            return false;
-                        }
-                    } else if old_value > 0 {
-                        peer.candidates.set(old_value as usize - 1);
-                    }
-                }
-                cells[index] = cell;
-            }
-            self.cells = cells;
             return true;
         }
         false
+    }
+
+    pub fn update_candidates(&mut self, index: usize) -> bool {
+        assert!(index < 81);
+        let mut cells = self.cells;
+        let value = cells[index].value;
+        if value > 0 {
+            let cell = Cell::new(value);
+            for peer in PEERS[index] {
+                let peer = &mut cells[peer];
+                if peer.value == 0 {
+                    peer.candidates.unset((cell.value - 1) as usize);
+                    if peer.candidates.none() {
+                        return false;
+                    }
+                } else if cell.value == peer.value {
+                    return false;
+                }
+            }
+            cells[index] = cell;
+        } else {
+            let old_value = cells[index].value;
+            let mut cell = Cell::new(0);
+            for peer in PEERS[index] {
+                let peer = &mut cells[peer];
+                if peer.value > 0 {
+                    cell.candidates.unset(peer.value as usize - 1);
+                    if cell.candidates.none() {
+                        return false;
+                    }
+                } else if old_value > 0 {
+                    peer.candidates.set(old_value as usize - 1);
+                }
+            }
+            cells[index] = cell;
+        }
+        self.cells = cells;
+        true
     }
 
     pub fn candidates(&self, index: usize) -> &Candidates {
@@ -247,7 +249,7 @@ impl FromStr for Grid {
         let mut grid = Grid::new();
         for (index, c) in string.char_indices() {
             let value = c.to_digit(10).ok_or(ParseError::InvalidDigit(c, index))? as u8;
-            if !grid.set_checked(index, value) {
+            if !grid.set(index, value, true) {
                 return Err(Box::new(ParseError::InvalidSudoku(index)));
             }
             let cell = &mut grid.cells[index];

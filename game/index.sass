@@ -1,0 +1,98 @@
+main
+    margin: 0 auto
+    font-family: sans-serif
+    max-width: 380px
+
+header
+    overflow: auto
+    text-align: center
+    margin: 10px auto
+
+h1
+    margin: 10px auto
+
+#controls *
+    margin: 2px
+    font-size: small
+
+#grid
+    display: grid
+    grid-template-columns: repeat(9, 40px)
+    grid-template-rows: repeat(9, 40px)
+    justify-content: center
+    margin: 10px auto
+
+.cell
+    background-color: beige
+    text-align: center
+    line-height: 40px
+    border: 1px solid lightgrey
+
+    &.selected, &:hover
+        background-color: burlywood
+
+    &:nth-child(9n-8)
+        border-left-width: 2px
+
+    &:nth-child(3n)
+        border-right-width: 2px
+
+    &:nth-child(n):nth-child(-n+9)
+        border-top-width: 2px
+
+    &:nth-child(n+19):nth-child(-n+27), &:nth-child(n+46):nth-child(-n+54), &:nth-child(n+73):nth-child(-n+81)
+        border-bottom-width: 2px
+
+#victory
+    text-align: center
+    width: 380px
+    position: absolute
+    top: 300px
+    display: none
+    z-index: 1
+    text-shadow: -1px -1px white, -1px 1px white, 1px -1px white, 1px 1px white
+
+#grid.victory .cell
+    animation: victory 2s linear 0s infinite normal none
+
+@keyframes victory
+    0%
+        transform: rotate(0deg) scale(1)
+
+    50%
+        transform: rotate(180deg) scale(1.5)
+        background-color: green
+
+    100%
+        transform: rotate(360deg) scale(1)
+
+.candidates
+    display: grid
+    grid-template-columns: repeat(3, 10px)
+    grid-template-rows: repeat(3, 10px)
+    justify-content: center
+    line-height: 20px
+
+.candidate
+    font-size: x-small
+    color: lightgrey
+
+#inputs
+    text-align: center
+    margin: 10px auto
+
+    & *
+        margin: 2px
+        font-size: small
+
+#value_inputs
+    display: none
+
+    &.active
+        display: initial
+
+#candidate_inputs
+    display: none
+
+    &.active
+        display: initial

@@ -1,4 +1,4 @@
-use rustdoku_sudoku::{generator, grid::Grid, solver::alx_solve};
+use rustdoku_sudoku::{candidates::Candidates, generator, grid::Grid, solver::alx_solve};
 
 use web_sys::window;
 use yew::prelude::*;
@@ -7,12 +7,13 @@ enum Msg {
     Clear,
     Solve,
     Generate,
+    Check,
     Select(usize),
     KeyDown(String),
     Import,
     Export,
     Givens(usize),
-    Candidates(ChangeData),
+    AssistedChange(ChangeData),
     InputType(InputType),
     ValueChange(usize),
     CandidateToggle(usize)
@@ -28,7 +29,8 @@ struct Model {
     link: ComponentLink<Self>,
     grid: Grid,
     givens: usize,
-    candidates: bool,
+    assisted: bool,
+    placemarks: [Candidates; 81],
     input_type: InputType,
     selected: Option<usize>,
 }
@@ -39,12 +41,12 @@ impl Component for Model {
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let default_givens = 28;
-
         Self {
             link,
             grid: generator::generate(default_givens),
             givens: default_givens,
-            candidates: false,
+            assisted: false,
+            placemarks: [Candidates::new(false); 81],
             selected: None,
             input_type: InputType::Values,
         }
@@ -54,6 +56,7 @@ impl Component for Model {
         match msg {
             Msg::Clear => {
                 self.grid = Grid::new();
+                self.placemarks = [Candidates::new(false); 81];
                 true
             }
             Msg::Solve => {
@@ -72,7 +75,16 @@ impl Component for Model {
             Msg::Generate => {
                 self.selected = None;
                 self.grid = generator::generate(self.givens);
+                self.placemarks = [Candidates::new(false); 81];
                 true
+            },
+            Msg::Check => {
+                if self.grid.is_valid() {
+                    gloo_dialogs::alert("Current sudoku is valid!");
+                } else {
+                    gloo_dialogs::alert("Current sudoku is invalid.");
+                }
+                false
             }
             Msg::Select(index) => {
                 if !self.grid.frozen(index) {
@@ -84,7 +96,18 @@ impl Component for Model {
             Msg::KeyDown(key) => {
                 if let Ok(digit) = key.parse::<u8>() {
                     if let Some(selected) = self.selected {
-                        self.grid.set_checked(selected, digit);
+                        match self.input_type {
+                            InputType::Values => {
+                                self.grid.set(selected, digit, self.assisted);
+                            }
+                            InputType::Candidates => {
+                                if self.assisted {
+                                    self.grid.candidates_mut(selected).toggle(digit as usize - 1);
+                                } else {
+                                    self.placemarks[selected].toggle(digit as usize - 1);
+                                }
+                            }
+                        };
                         return true;
                     }
                 } else if key == "Escape" {
@@ -116,9 +139,9 @@ impl Component for Model {
                 self.givens = givens;
                 false
             }
-            Msg::Candidates(data) => match data {
+            Msg::AssistedChange(data) => match data {
                 ChangeData::Value(string) => {
-                    self.candidates = string == "false";
+                    self.assisted = string == "false";
                     true
                 }
                 _ => false,
@@ -129,14 +152,18 @@ impl Component for Model {
             }
             Msg::ValueChange(value) => {
                 if let Some(selected) = self.selected {
-                    self.grid.set_checked(selected, value as u8);
+                    self.grid.set(selected, value as u8, self.assisted);
                     return true;
                 }
                 false
             }
             Msg::CandidateToggle(candidate) => {
                 if let Some(selected) = self.selected {
-                    self.grid.candidates_mut(selected).toggle(candidate - 1);
+                    if self.assisted {
+                        self.grid.candidates_mut(selected).toggle(candidate - 1);
+                    } else {
+                        self.placemarks[selected].toggle(candidate - 1);
+                    }
                     return true;
                 }
                 false
@@ -165,8 +192,8 @@ impl Component for Model {
             if cell > 0 {
                 let value = char::from_digit(cell.into(), 10).unwrap().to_string();
                 html! { <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>{value}</div> }
-            } else if self.candidates {
-                let candidates = self.grid.candidates(index);
+            } else {
+                let candidates = if self.assisted { self.grid.candidates(index) } else { &self.placemarks[index] };
                 let candidates = (0..9).map(|candidate| {
                     if candidates.get(candidate) {
                         html! { <div class="candidate">{candidate + 1}</div> }
@@ -179,8 +206,6 @@ impl Component for Model {
                         <div class="candidates">{ for candidates }</div>
                     </div>
                 }
-            } else {
-                html! { <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}></div> }
             }
         });
 
@@ -191,6 +216,7 @@ impl Component for Model {
                     <div id="controls">
                         <div>
                             <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
+                            <button onclick=self.link.callback(|_| Msg::Check)>{"Check"}</button>
                             <button onclick=self.link.callback(|_| Msg
                             ::Solve)>{"Solve"}</button>
                             <button onclick=self.link.callback(|_| Msg
@@ -199,8 +225,8 @@ impl Component for Model {
                             <label for="givens">{"Givens"}</label>
                         </div>
                         <div>
-                            <input type="checkbox" id="candidates" checked={self.candidates} onchange=self.link.callback(Msg::Candidates) value={self.candidates.to_string()} />
-                            <label for="candidates">{"Candidates"}</label>
+                            <input type="checkbox" id="assisted" checked={self.assisted} onchange=self.link.callback(Msg::AssistedChange) value={self.assisted.to_string()} />
+                            <label for="assisted">{"Assisted"}</label>
                         </div>
                         <div>
                             <button onclick=self.link.callback(|_| Msg::Import)>{"Import"}</button>
@@ -208,7 +234,8 @@ impl Component for Model {
                         </div>
                     </div>
                 </header>
-                <section id="grid">
+                <div id="victory" style={ if self.grid.is_complete() { {"display: block"} } else { {""} } }><h2>{"You Win!"}</h2></div>
+                <section id="grid" class={ if self.grid.is_complete() { classes!("victory") } else { classes!() }}>
                     { for cells }
                 </section>
                 <section id="inputs">
@@ -244,7 +271,11 @@ impl Component for Model {
                             let is = char::from_digit(i as u32, 10).unwrap().to_string();
                             let id = format!("candidate_{}", i);
                             let checked = if let Some(selected) = self.selected {
-                                self.grid.candidates(selected).get(i - 1)
+                                if self.assisted {
+                                    self.grid.candidates(selected).get(i - 1)
+                                } else {
+                                    self.placemarks[selected].get(i - 1)
+                                }
                             } else {
                                 false
                             };

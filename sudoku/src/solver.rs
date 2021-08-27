@@ -70,7 +70,7 @@ pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
         .map(|solution| {
             let mut grid = *grid;
             for (r, c, n) in solution {
-                grid.set((r * 9 + c) as usize, *n);
+                grid.set((r * 9 + c) as usize, *n, false);
             }
             grid
         })
