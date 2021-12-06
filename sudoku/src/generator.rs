@@ -11,7 +11,12 @@ use rand::thread_rng;
 fn seed_grid() -> Grid {
     let mut rng = thread_rng();
     let mut grid = Grid::new();
-    let mut indices = *[&ROWS, &COLUMNS, &BOXES].iter().choose(&mut rng).unwrap().choose(&mut rng).unwrap();
+    let mut indices = *[&ROWS, &COLUMNS, &BOXES]
+        .iter()
+        .choose(&mut rng)
+        .unwrap()
+        .choose(&mut rng)
+        .unwrap();
     indices.shuffle(&mut rng);
     for (n, index) in indices.iter().enumerate() {
         grid.set(*index, n as u8 + 1, false);

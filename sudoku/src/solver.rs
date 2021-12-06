@@ -164,11 +164,9 @@ mod tests {
         let grids = &alx_solve(&grid, 0);
         assert_eq!(grids.len(), 1);
         assert_eq!(
-            grids[0],
-            complete_grid,
+            grids[0], complete_grid,
             "grid = {}, complete_grid = {}",
-            grid.to_string(),
-            complete_grid.to_string()
+            grid, complete_grid
         )
     }
 

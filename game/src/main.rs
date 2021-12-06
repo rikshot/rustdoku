@@ -1,6 +1,6 @@
 use rustdoku_sudoku::{candidates::Candidates, generator, grid::Grid, solver::alx_solve};
 
-use web_sys::window;
+use web_sys::{window, HtmlInputElement};
 use yew::prelude::*;
 
 enum Msg {
@@ -13,10 +13,10 @@ enum Msg {
     Import,
     Export,
     Givens(usize),
-    AssistedChange(ChangeData),
+    AssistedChange(String),
     InputType(InputType),
     ValueChange(usize),
-    CandidateToggle(usize)
+    CandidateToggle(usize),
 }
 
 #[derive(PartialEq)]
@@ -26,7 +26,6 @@ enum InputType {
 }
 
 struct Model {
-    link: ComponentLink<Self>,
     grid: Grid,
     givens: usize,
     assisted: bool,
@@ -39,10 +38,9 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         let default_givens = 28;
         Self {
-            link,
             grid: generator::generate(default_givens),
             givens: default_givens,
             assisted: false,
@@ -52,7 +50,7 @@ impl Component for Model {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Clear => {
                 self.grid = Grid::new();
@@ -77,7 +75,7 @@ impl Component for Model {
                 self.grid = generator::generate(self.givens);
                 self.placemarks = [Candidates::new(false); 81];
                 true
-            },
+            }
             Msg::Check => {
                 if self.grid.is_valid() {
                     gloo_dialogs::alert("Current sudoku is valid!");
@@ -139,13 +137,10 @@ impl Component for Model {
                 self.givens = givens;
                 false
             }
-            Msg::AssistedChange(data) => match data {
-                ChangeData::Value(string) => {
-                    self.assisted = string == "false";
-                    true
-                }
-                _ => false,
-            },
+            Msg::AssistedChange(data) => {
+                self.assisted = data == "false";
+                true
+            }
             Msg::InputType(input_type) => {
                 self.input_type = input_type;
                 true
@@ -171,11 +166,9 @@ impl Component for Model {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let link = ctx.link();
 
-    fn view(&self) -> Html {
         let cells = self.grid.cells().enumerate().map(|(index, cell)| {
             let selected = if self.selected.is_some() && self.selected.unwrap() == index {
                 Some("selected")
@@ -183,15 +176,15 @@ impl Component for Model {
                 None
             };
 
-            let onclick = self.link.callback(move |_| Msg::Select(index));
-            let onfocus = self.link.callback(move |_| Msg::Select(index));
-            let onkeydown = self.link.callback(|event: KeyboardEvent| {
+            let onclick = link.callback(move |_| Msg::Select(index));
+            let onfocus = link.callback(move |_| Msg::Select(index));
+            let onkeydown = link.callback(|event: KeyboardEvent| {
                 Msg::KeyDown(event.key())
             });
 
             if cell > 0 {
                 let value = char::from_digit(cell.into(), 10).unwrap().to_string();
-                html! { <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>{value}</div> }
+                html! { <div tabindex=0 role="button" aria-label={index.to_string()} class={classes!("cell", selected)} onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>{value}</div> }
             } else {
                 let candidates = if self.assisted { self.grid.candidates(index) } else { &self.placemarks[index] };
                 let candidates = (0..9).map(|candidate| {
@@ -202,7 +195,7 @@ impl Component for Model {
                     }
                 });
                 html! {
-                    <div tabindex=0 role="button" aria-label={index.to_string()} class=classes!("cell", selected) onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>
+                    <div tabindex=0 role="button" aria-label={index.to_string()} class={classes!("cell", selected)} onclick={onclick} onfocus={onfocus} onkeydown={onkeydown}>
                         <div class="candidates">{ for candidates }</div>
                     </div>
                 }
@@ -215,22 +208,22 @@ impl Component for Model {
                     <h1>{"Rustdoku"}</h1>
                     <div id="controls">
                         <div>
-                            <button onclick=self.link.callback(|_| Msg::Clear)>{"Clear"}</button>
-                            <button onclick=self.link.callback(|_| Msg::Check)>{"Check"}</button>
-                            <button onclick=self.link.callback(|_| Msg
-                            ::Solve)>{"Solve"}</button>
-                            <button onclick=self.link.callback(|_| Msg
-                            ::Generate)>{"Generate"}</button>
-                            <input type="number" id="givens" value={self.givens.to_string()} size=2 min=17 max=81 oninput=self.link.callback(|event: InputData| Msg::Givens(event.value.parse::<usize>().unwrap())) />
+                            <button onclick={link.callback(|_| Msg::Clear)}>{"Clear"}</button>
+                            <button onclick={link.callback(|_| Msg::Check)}>{"Check"}</button>
+                            <button onclick={link.callback(|_| Msg
+                            ::Solve)}>{"Solve"}</button>
+                            <button onclick={link.callback(|_| Msg
+                            ::Generate)}>{"Generate"}</button>
+                            <input type="number" id="givens" value={self.givens.to_string()} size=2 min=17 max=81 oninput={link.callback(|e: InputEvent| { let input = e.target_dyn_into::<HtmlInputElement>(); input.map(|input| Msg::Givens(input.value().parse::<usize>().unwrap())).unwrap() })} />
                             <label for="givens">{"Givens"}</label>
                         </div>
                         <div>
-                            <input type="checkbox" id="assisted" checked={self.assisted} onchange=self.link.callback(Msg::AssistedChange) value={self.assisted.to_string()} />
+                            <input type="checkbox" id="assisted" checked={self.assisted} onchange={link.batch_callback(|e: Event| { let input = e.target_dyn_into::<HtmlInputElement>(); input.map(|input| Msg::AssistedChange(input.value())) })} value={self.assisted.to_string()} />
                             <label for="assisted">{"Assisted"}</label>
                         </div>
                         <div>
-                            <button onclick=self.link.callback(|_| Msg::Import)>{"Import"}</button>
-                            <button onclick=self.link.callback(|_| Msg::Export)>{"Export"}</button>
+                            <button onclick={link.callback(|_| Msg::Import)}>{"Import"}</button>
+                            <button onclick={link.callback(|_| Msg::Export)}>{"Export"}</button>
                         </div>
                     </div>
                 </header>
@@ -240,9 +233,9 @@ impl Component for Model {
                 </section>
                 <section id="inputs">
                     <div id="input_type">
-                        <input type="radio" id="value_input" name="input_type" value="values" checked={self.input_type == InputType::Values} onchange=self.link.callback(|_| Msg::InputType(InputType::Values)) />
+                        <input type="radio" id="value_input" name="input_type" value="values" checked={self.input_type == InputType::Values} onchange={link.callback(|_| Msg::InputType(InputType::Values))} />
                         <label for="value_input">{"Value"}</label>
-                        <input type="radio" id="candidate_input" name="input_type" value="candidates" checked={self.input_type == InputType::Candidates} onchange=self.link.callback(|_| Msg::InputType(InputType::Candidates)) />
+                        <input type="radio" id="candidate_input" name="input_type" value="candidates" checked={self.input_type == InputType::Candidates} onchange={link.callback(|_| Msg::InputType(InputType::Candidates))} />
                         <label for="candidate_input">{"Candidate"}</label>
                     </div>
                     <div id="value_inputs" class={ if self.input_type == InputType::Values { classes!("active") } else { classes!() }}>
@@ -255,11 +248,11 @@ impl Component for Model {
                                 false
                             };
                             html! { <>
-                                <input type="radio" name="value" id={id.clone()} value={is.clone()} onchange=self.link.callback(move |_| Msg::ValueChange(i)) checked={checked} />
+                                <input type="radio" name="value" id={id.clone()} value={is.clone()} onchange={link.callback(move |_| Msg::ValueChange(i))} checked={checked} />
                                 <label for={id.clone()}>{is.clone()}</label>
                             </> }
                         }) }
-                        <input type="radio" name="value" id="value_0" value="0" onchange=self.link.callback(move |_| Msg::ValueChange(0)) checked={ if let Some(selected) = self.selected {
+                        <input type="radio" name="value" id="value_0" value="0" onchange={link.callback(move |_| Msg::ValueChange(0))} checked={ if let Some(selected) = self.selected {
                             self.grid.get(selected) == 0
                         } else {
                             false
@@ -280,7 +273,7 @@ impl Component for Model {
                                 false
                             };
                             html! { <>
-                                <input type="checkbox" name="candidate" id={id.clone()} value={is.clone()} onchange=self.link.callback(move |_| Msg::CandidateToggle(i)) checked={checked} />
+                                <input type="checkbox" name="candidate" id={id.clone()} value={is.clone()} onchange={link.callback(move |_| Msg::CandidateToggle(i))} checked={checked} />
                                 <label for={id.clone()}>{is.clone()}</label>
                             </> }
                         }) }

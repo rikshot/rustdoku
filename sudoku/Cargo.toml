@@ -3,7 +3,7 @@ name = "rustdoku-sudoku"
 version = "0.1.0"
 description = "Solves and generates sudokus"
 authors = ["Ville Orkas <ville@orkas.fi>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 itertools = "*"

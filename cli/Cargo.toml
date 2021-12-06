@@ -3,7 +3,7 @@ name = "rustdoku-cli"
 version = "0.1.0"
 description = "Command line interface for rustdoku"
 authors = ["Ville Orkas <ville@orkas.fi>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clap = "*"
