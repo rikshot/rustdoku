@@ -6,6 +6,7 @@ authors = ["Ville Orkas <ville@orkas.fi>"]
 edition = "2021"
 
 [dependencies]
-clap = "*"
+clap = { version = "*", features = ["cargo"] }
 rayon = "*"
 rustdoku-sudoku = { path = "../sudoku" }
+mimalloc = { version = "*", default-features = false }

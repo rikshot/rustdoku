@@ -5,7 +5,12 @@ use rustdoku_sudoku::{generator, grid::Grid};
 
 use rayon::prelude::*;
 
-use clap::{app_from_crate, crate_authors, crate_description, crate_name, crate_version, value_t, Arg, SubCommand};
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
+use clap::{App, Arg, app_from_crate};
 
 type SolveError = Box<dyn Error + Sync + Send>;
 
@@ -73,7 +78,7 @@ fn generate(givens: usize, count: usize) {
         println!("{}", sudoku);
     }
     println!(
-        "Generated {} unique sudoku{} with {} givens in {}s, ~{}μs per sudoku",
+        "Generated {} unique sudoku{} with {} givens in {}s, ~{}μs per sudoku",
         count,
         if count == 1 { "" } else { "s" },
         givens,
@@ -85,23 +90,23 @@ fn generate(givens: usize, count: usize) {
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let matches = app_from_crate!()
         .subcommand(
-            SubCommand::with_name("solve").about("Solves given sudoku").arg(
-                Arg::with_name("sudoku_or_path")
+            App::new("solve").about("Solves given sudoku").arg(
+                Arg::new("sudoku_or_path")
                     .help("A sudoku or a path to a file containing sudokus")
                     .required(true)
                     .index(1),
             ),
         )
         .subcommand(
-            SubCommand::with_name("generate")
+            App::new("generate")
                 .about("Generates a random sudoku")
                 .arg(
-                    Arg::with_name("givens")
+                    Arg::new("givens")
                         .help("How many givens are included (default 28)")
                         .index(1),
                 )
                 .arg(
-                    Arg::with_name("count")
+                    Arg::new("count")
                         .help("How many sudokus to generate (default 1)")
                         .index(2),
                 ),
@@ -122,8 +127,8 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
             }
         }
     } else if let Some(matches) = matches.subcommand_matches("generate") {
-        let givens = value_t!(matches, "givens", usize).unwrap_or(28);
-        let count = value_t!(matches, "count", usize).unwrap_or(1);
+        let givens = matches.value_of_t("givens").unwrap_or(28);
+        let count = matches.value_of_t("count").unwrap_or(1);
         generate(givens, count);
     }
     Ok(())
