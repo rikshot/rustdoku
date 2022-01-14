@@ -113,13 +113,13 @@ impl Grid {
     }
 
     pub fn get(&self, index: usize) -> u8 {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         self.cells[index].value
     }
 
     pub fn set(&mut self, index: usize, value: u8, checked: bool) -> bool {
-        assert!(index < 81);
-        assert!(value < 10);
+        debug_assert!(index < 81);
+        debug_assert!(value < 10);
         let mut cell = &mut self.cells[index];
         if !cell.frozen {
             cell.value = value;
@@ -137,7 +137,7 @@ impl Grid {
     }
 
     pub fn update_candidates(&mut self, index: usize) -> bool {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         let mut cells = self.cells;
         let value = cells[index].value;
         if value > 0 {
@@ -175,22 +175,22 @@ impl Grid {
     }
 
     pub fn candidates(&self, index: usize) -> &Candidates {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         &self.cells[index].candidates
     }
 
     pub fn candidates_mut(&mut self, index: usize) -> &mut Candidates {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         &mut self.cells[index].candidates
     }
 
     pub fn freeze(&mut self, index: usize) {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         self.cells[index].frozen = true;
     }
 
     pub fn frozen(&self, index: usize) -> bool {
-        assert!(index < 81);
+        debug_assert!(index < 81);
         self.cells[index].frozen
     }
 

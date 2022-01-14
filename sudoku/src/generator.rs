@@ -25,7 +25,7 @@ fn seed_grid() -> Grid {
 }
 
 pub fn generate(givens: usize) -> Grid {
-    assert!((17..=81).contains(&givens), "Givens must be between 17 and 81");
+    debug_assert!((17..=81).contains(&givens), "Givens must be between 17 and 81");
     let mut rng = thread_rng();
     loop {
         let mut grid = seed_grid();
