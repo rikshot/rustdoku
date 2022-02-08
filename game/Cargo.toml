@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 rustdoku-sudoku = { path = "../sudoku" }
-yew = "*"
+sycamore = "0.8.0-beta.2"
 getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "*"
 log = "*"
@@ -20,5 +20,6 @@ version = "*"
 features = [
     "Window",
     "Navigator",
-    "Clipboard"
+    "Clipboard",
+    "KeyboardEvent"
 ]

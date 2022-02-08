@@ -5,8 +5,10 @@ use rustdoku_sudoku::{generator, grid::Grid};
 
 use rayon::prelude::*;
 
+#[cfg(not(target_family = "wasm"))]
 use mimalloc::MiMalloc;
 
+#[cfg(not(target_family = "wasm"))]
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
