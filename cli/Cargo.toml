@@ -9,4 +9,6 @@ edition = "2021"
 clap = { version = "*", features = ["cargo"] }
 rayon = "*"
 rustdoku-sudoku = { path = "../sudoku" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 mimalloc = { version = "*", default-features = false }
