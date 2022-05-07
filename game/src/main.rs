@@ -70,57 +70,61 @@ fn Cell<'a, G: Html>(cx: Scope<'a>, props: CellProps<'a>) -> View<G> {
         }
     };
 
-    let class = if props.selected.get().is_some() && props.selected.get().unwrap() == props.index {
-        "cell selected"
-    } else {
-        "cell"
-    };
-
-    if (*props.grid.get()).get(props.index) > 0 {
-        let value = char::from_digit((*props.grid.get()).get(props.index).into(), 10)
-            .unwrap()
-            .to_string();
-        view! { cx,
-            div(
-                tabindex=0,
-                role="button",
-                aria-label=(props.index.to_string()),
-                class=(class),
-                on:click=on_select,
-                on:focus=on_select,
-                on:keydown=on_keydown) {
-                (value)
-            }
-        }
-    } else {
-        let candidates = if *props.assisted.get() {
-            let grid = *props.grid.get();
-            *grid.candidates(props.index)
+    let class = create_memo(cx, move || {
+        if props.selected.get().is_some() && props.selected.get().unwrap() == props.index {
+            "cell selected"
         } else {
-            props.placemarks.get()[props.index]
-        };
-        let candidates = View::new_fragment(
-            (0..9)
-                .map(|candidate| {
-                    if candidates.get(candidate) {
-                        view! { cx, div(class="candidate") {(candidate + 1)} }
-                    } else {
-                        view! { cx, div(class="candidate") {} }
-                    }
-                })
-                .collect(),
-        );
-        view! { cx,
-            div(tabindex=0,
-                role="button",
-                aria-label=(props.index.to_string()),
-                class=(class),
-                on:click=on_select,
-                on:focus=on_select,
-                on:keydown=on_keydown) {
-                div(class="candidates") { (candidates) }
-            }
+            "cell"
         }
+    });
+
+    view! { cx,
+        (if (*props.grid.get()).get(props.index) > 0 {
+            let value = char::from_digit((*props.grid.get()).get(props.index).into(), 10)
+                .unwrap()
+                .to_string();
+            view! { cx,
+                div(
+                    tabindex=0,
+                    role="button",
+                    aria-label=(props.index.to_string()),
+                    class=(class),
+                    on:click=on_select,
+                    on:focus=on_select,
+                    on:keydown=on_keydown) {
+                    (value)
+                }
+            }
+        } else {
+            let candidates = if *props.assisted.get() {
+                let grid = *props.grid.get();
+                *grid.candidates(props.index)
+            } else {
+                props.placemarks.get()[props.index]
+            };
+            let candidates = View::new_fragment(
+                (0..9)
+                    .map(|candidate| {
+                        if candidates.get(candidate) {
+                            view! { cx, div(class="candidate") {(candidate + 1)} }
+                        } else {
+                            view! { cx, div(class="candidate") {} }
+                        }
+                    })
+                    .collect(),
+            );
+            view! { cx,
+                div(tabindex=0,
+                    role="button",
+                    aria-label=(props.index.to_string()),
+                    class=(class),
+                    on:click=on_select,
+                    on:focus=on_select,
+                    on:keydown=on_keydown) {
+                    div(class="candidates") { (candidates) }
+                }
+            }
+        })
     }
 }
 

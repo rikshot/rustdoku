@@ -1,0 +1,6 @@
+[build]
+target = "game/index.html"
+
+[[hooks]]
+stage = "post_build"
+command = "scripts/precompress.sh"
