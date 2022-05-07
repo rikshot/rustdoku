@@ -12,7 +12,7 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use clap::{App, Arg, app_from_crate};
+use clap::{command, Arg, Command};
 
 type SolveError = Box<dyn Error + Sync + Send>;
 
@@ -90,9 +90,9 @@ fn generate(givens: usize, count: usize) {
 }
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
-    let matches = app_from_crate!()
+    let matches = command!()
         .subcommand(
-            App::new("solve").about("Solves given sudoku").arg(
+            Command::new("solve").about("Solves given sudoku").arg(
                 Arg::new("sudoku_or_path")
                     .help("A sudoku or a path to a file containing sudokus")
                     .required(true)
@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
             ),
         )
         .subcommand(
-            App::new("generate")
+            Command::new("generate")
                 .about("Generates a random sudoku")
                 .arg(
                     Arg::new("givens")

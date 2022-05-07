@@ -36,10 +36,11 @@ struct CellProps<'a> {
 }
 
 #[component]
-fn Cell<'a, G: Html>(ctx: ScopeRef<'a>, props: CellProps<'a>) -> View<G> {
+fn Cell<'a, G: Html>(cx: Scope<'a>, props: CellProps<'a>) -> View<G> {
     let on_select = move |_event| {
         props.selected.set(Some(props.index));
     };
+
     let on_keydown = |event: Event| {
         let event: KeyboardEvent = event.unchecked_into();
         let key = event.key();
@@ -69,57 +70,69 @@ fn Cell<'a, G: Html>(ctx: ScopeRef<'a>, props: CellProps<'a>) -> View<G> {
         }
     };
 
-    view! { ctx,
-        (if (*props.grid.get()).get(props.index) > 0 {
-            let value = char::from_digit((*props.grid.get()).get(props.index).into(), 10).unwrap().to_string();
-            view! { ctx,
-                div(
-                    tabindex=0,
-                    role="button",
-                    aria-label=(props.index.to_string()),
-                    class=(if props.selected.get().is_some() && props.selected.get().unwrap() == props.index { "cell selected" } else { "cell" }),
-                    on:click=on_select,
-                    on:focus=on_select,
-                    on:keydown=on_keydown) {
-                    (value)
-                }
+    let class = if props.selected.get().is_some() && props.selected.get().unwrap() == props.index {
+        "cell selected"
+    } else {
+        "cell"
+    };
+
+    if (*props.grid.get()).get(props.index) > 0 {
+        let value = char::from_digit((*props.grid.get()).get(props.index).into(), 10)
+            .unwrap()
+            .to_string();
+        view! { cx,
+            div(
+                tabindex=0,
+                role="button",
+                aria-label=(props.index.to_string()),
+                class=(class),
+                on:click=on_select,
+                on:focus=on_select,
+                on:keydown=on_keydown) {
+                (value)
             }
+        }
+    } else {
+        let candidates = if *props.assisted.get() {
+            let grid = *props.grid.get();
+            *grid.candidates(props.index)
         } else {
-            let candidates = if *props.assisted.get() {
-                let grid = *props.grid.get();
-                *grid.candidates(props.index)
-            } else {
-                props.placemarks.get()[props.index]
-            };
-            let candidates = View::new_fragment(
-                (0..9)
-                    .map(|candidate| {
-                        if candidates.get(candidate) {
-                            view! { ctx, div(class="candidate") {(candidate + 1)} }
-                        } else {
-                            view! { ctx, div(class="candidate") {} }
-                        }
-                    })
-                    .collect(),
-            );
-            view! { ctx,
-                div(tabindex=0, role="button", aria-label=(props.index.to_string()), class=(if props.selected.get().is_some() && props.selected.get().unwrap() == props.index { "cell selected" } else { "cell" }), on:click=on_select, on:focus=on_select, on:keydown=on_keydown) {
-                    div(class="candidates") { (candidates) }
-                }
+            props.placemarks.get()[props.index]
+        };
+        let candidates = View::new_fragment(
+            (0..9)
+                .map(|candidate| {
+                    if candidates.get(candidate) {
+                        view! { cx, div(class="candidate") {(candidate + 1)} }
+                    } else {
+                        view! { cx, div(class="candidate") {} }
+                    }
+                })
+                .collect(),
+        );
+        view! { cx,
+            div(tabindex=0,
+                role="button",
+                aria-label=(props.index.to_string()),
+                class=(class),
+                on:click=on_select,
+                on:focus=on_select,
+                on:keydown=on_keydown) {
+                div(class="candidates") { (candidates) }
             }
-        })
+        }
     }
 }
 
 #[component]
-fn Game<'a, G: Html>(ctx: ScopeRef<'a>) -> View<G> {
+fn Game<G: Html>(cx: Scope) -> View<G> {
     let default_givens = 28;
-    let grid = ctx.create_signal(generator::generate(default_givens));
-    let placemarks = ctx.create_signal([Candidates::new(false); 81]);
-    let selected: &Signal<Option<usize>> = ctx.create_signal(None);
-    let givens = ctx.create_signal(default_givens);
-    let assisted = ctx.create_signal(false);
-    let input_type = ctx.create_signal(InputType::Values);
+    let grid = create_signal(cx, generator::generate(default_givens));
+    let placemarks = create_signal(cx, [Candidates::new(false); 81]);
+    let selected: &Signal<Option<usize>> = create_signal(cx, None);
+    let givens = create_signal(cx, default_givens);
+    let assisted = create_signal(cx, false);
+    let input_type = create_signal(cx, InputType::Values);
 
     let on_clear = |_event| {
         grid.set(Grid::new());
@@ -205,7 +218,7 @@ fn Game<'a, G: Html>(ctx: ScopeRef<'a>) -> View<G> {
     let cells = View::new_fragment(
         (0..81)
             .map(|index| {
-                view! { ctx,
+                view! { cx,
                     Cell {
                         grid: grid,
                         placemarks: placemarks,
@@ -219,7 +232,7 @@ fn Game<'a, G: Html>(ctx: ScopeRef<'a>) -> View<G> {
             .collect(),
     );
 
-    view! { ctx,
+    view! { cx,
         main {
             header {
                 h1 {"Rustdoku"}
@@ -259,7 +272,7 @@ fn Game<'a, G: Html>(ctx: ScopeRef<'a>) -> View<G> {
                         } else {
                             false
                         };
-                        view! { ctx,
+                        view! { cx,
                             input(type="radio", name="value", id=format!("value_{}", i), value=i, on:change=move |_| on_value_changed(i), checked=checked) {}
                             label(for=format!("value_{}", i)) {(i)}
                         }
@@ -282,7 +295,7 @@ fn Game<'a, G: Html>(ctx: ScopeRef<'a>) -> View<G> {
                         } else {
                             false
                         };
-                        view! { ctx,
+                        view! { cx,
                             input(type="checkbox", name="candidate", id=format!("candidate_{}", i), value=i, on:change=move |_| on_candidate_changed(i), checked=checked) {}
                             label(for=format!("candidate_{}", i)) {(i)}
                         }
