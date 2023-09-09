@@ -1,6 +1,6 @@
 use ahash::{AHashMap, AHashSet};
-
 use itertools::iproduct;
+use once_cell::sync::Lazy;
 
 use super::grid::Grid;
 
@@ -15,41 +15,40 @@ enum Constraint {
 type ConstraintType = (Constraint, (u8, u8));
 type RCNType = (u8, u8, u8);
 
-lazy_static! {
-    static ref Y: AHashMap<RCNType, [ConstraintType; 4]> = {
-        let mut y = AHashMap::with_capacity(729);
-        for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
-            let b = r / 3 * 3 + c / 3;
-            y.insert(
-                (r, c, n),
-                [
-                    (Constraint::RC, (r, c)),
-                    (Constraint::RN, (r, n)),
-                    (Constraint::CN, (c, n)),
-                    (Constraint::BN, (b, n)),
-                ],
-            );
+static Y: Lazy<AHashMap<RCNType, [ConstraintType; 4]>> = Lazy::new(|| {
+    let mut y = AHashMap::with_capacity(729);
+    for (r, c, n) in iproduct!(0..9, 0..9, 1..10) {
+        let b = r / 3 * 3 + c / 3;
+        y.insert(
+            (r, c, n),
+            [
+                (Constraint::RC, (r, c)),
+                (Constraint::RN, (r, n)),
+                (Constraint::CN, (c, n)),
+                (Constraint::BN, (b, n)),
+            ],
+        );
+    }
+    y
+});
+
+static X: Lazy<AHashMap<ConstraintType, AHashSet<RCNType>>> = Lazy::new(|| {
+    let x = iproduct!(0..9, 0..9)
+        .map(|rc| (Constraint::RC, rc))
+        .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
+        .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
+        .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)));
+    let mut exact_cover: AHashMap<ConstraintType, AHashSet<RCNType>> = AHashMap::with_capacity(324);
+    for j in x {
+        exact_cover.insert(j, AHashSet::with_capacity(9));
+    }
+    for (i, row) in Y.iter() {
+        for j in *row {
+            exact_cover.get_mut(&j).unwrap().insert(*i);
         }
-        y
-    };
-    static ref X: AHashMap<ConstraintType, AHashSet<RCNType>> = {
-        let x = iproduct!(0..9, 0..9)
-            .map(|rc| (Constraint::RC, rc))
-            .chain(iproduct!(0..9, 1..10).map(|rn| (Constraint::RN, rn)))
-            .chain(iproduct!(0..9, 1..10).map(|cn| (Constraint::CN, cn)))
-            .chain(iproduct!(0..9, 1..10).map(|bn| (Constraint::BN, bn)));
-        let mut exact_cover: AHashMap<ConstraintType, AHashSet<RCNType>> = AHashMap::with_capacity(324);
-        for j in x {
-            exact_cover.insert(j, AHashSet::with_capacity(9));
-        }
-        for (i, row) in Y.iter() {
-            for j in *row {
-                exact_cover.get_mut(&j).unwrap().insert(*i);
-            }
-        }
-        exact_cover
-    };
-}
+    }
+    exact_cover
+});
 
 pub fn alx_solve(grid: &Grid, limit: usize) -> Vec<Grid> {
     let mut x = X.clone();

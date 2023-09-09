@@ -1,10 +1,10 @@
 [workspace]
 members = ["cli", "sudoku", "game"]
 default-members = ["sudoku", "cli"]
+resolver = "2"
 
 [profile.release]
 lto = "fat"
 codegen-units = 1
 opt-level = 3
 panic = "abort"
-debug = true

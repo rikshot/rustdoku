@@ -1,30 +1,31 @@
+use std::path::PathBuf;
 use std::{error::Error, time::Instant};
+
+use clap::{arg, command, ArgGroup, Parser, Subcommand};
+#[cfg(not(target_family = "wasm"))]
+use mimalloc::MiMalloc;
+use rayon::prelude::*;
 
 use rustdoku_sudoku::solver::alx_solve;
 use rustdoku_sudoku::{generator, grid::Grid};
-
-use rayon::prelude::*;
-
-#[cfg(not(target_family = "wasm"))]
-use mimalloc::MiMalloc;
 
 #[cfg(not(target_family = "wasm"))]
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use clap::{command, Arg, Command};
-
 type SolveError = Box<dyn Error + Sync + Send>;
 
-fn solve_file(path: &str) -> Result<(), SolveError> {
+fn solve_file(path: &PathBuf, verbose: bool) -> Result<(), SolveError> {
     let sudoku_file = std::fs::read_to_string(path)?;
     let count = sudoku_file.lines().count();
-    println!(
-        "Solving {} sudoku{} from '{}'",
-        count,
-        if count == 1 { "" } else { "s" },
-        path
-    );
+    if verbose {
+        println!(
+            "Solving {} sudoku{} from '{}'",
+            count,
+            if count == 1 { "" } else { "s" },
+            path.display()
+        );
+    }
     let start = Instant::now();
     let results: Vec<Result<(Grid, Vec<Grid>), SolveError>> = sudoku_file
         .par_lines()
@@ -44,13 +45,15 @@ fn solve_file(path: &str) -> Result<(), SolveError> {
             Err(error) => println!("{}", error),
         };
     }
-    println!(
-        "Solved {} sudoku{} in {}s, ~{}μs per sudoku",
-        count,
-        if count == 1 { "" } else { "s" },
-        duration,
-        duration / (count as f32) * 1000000.0
-    );
+    if verbose {
+        println!(
+            "Solved {} sudoku{} in {}s, ~{}μs per sudoku",
+            count,
+            if count == 1 { "" } else { "s" },
+            duration,
+            duration / (count as f32) * 1000000.0
+        );
+    }
     Ok(())
 }
 
@@ -63,75 +66,87 @@ fn solve_single(sudoku: &str) -> Result<(), Box<dyn Error + Sync + Send>> {
     Ok(())
 }
 
-fn generate(givens: usize, count: usize) {
-    println!(
-        "Generating {} unique sudoku{} with {} givens",
-        count,
-        if count == 1 { "" } else { "s" },
-        givens
-    );
+fn generate(givens: u8, count: usize, verbose: bool) {
+    if verbose {
+        println!(
+            "Generating {} unique sudoku{} with {} givens",
+            count,
+            if count == 1 { "" } else { "s" },
+            givens
+        );
+    }
     let start = Instant::now();
     let generated = (0..count)
         .into_par_iter()
-        .map(|_| generator::generate(givens))
+        .map(|_| generator::generate(givens as usize))
         .collect::<Vec<Grid>>();
     let duration = start.elapsed().as_secs_f32();
     for sudoku in &generated {
         println!("{}", sudoku);
     }
-    println!(
-        "Generated {} unique sudoku{} with {} givens in {}s, ~{}μs per sudoku",
-        count,
-        if count == 1 { "" } else { "s" },
-        givens,
-        duration,
-        duration / (count as f32) * 1000000.0
-    );
+    if verbose {
+        println!(
+            "Generated {} unique sudoku{} with {} givens in {}s, ~{}μs per sudoku",
+            count,
+            if count == 1 { "" } else { "s" },
+            givens,
+            duration,
+            duration / (count as f32) * 1000000.0
+        );
+    }
+}
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+    /// Prints additional statistics
+    #[arg(short, long)]
+    verbose: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Solve sudokus
+    #[command(group(ArgGroup::new("input").required(true).args(["sudoku", "path"])))]
+    Solve {
+        /// Solves a single sudoku
+        #[arg(short, long)]
+        sudoku: Option<String>,
+
+        /// Solves sudokus from a file
+        #[arg(short, long)]
+        path: Option<PathBuf>,
+    },
+    /// Generate sudokus
+    Generate {
+        /// How many givens to generate
+        #[arg(short, long, default_value_t = 28, value_parser = clap::value_parser ! (u8).range(17..81))]
+        givens: u8,
+
+        /// How many sudokus to generate
+        #[arg(short, long, default_value_t = 1)]
+        count: usize,
+    },
 }
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
-    let matches = command!()
-        .subcommand(
-            Command::new("solve").about("Solves given sudoku").arg(
-                Arg::new("sudoku_or_path")
-                    .help("A sudoku or a path to a file containing sudokus")
-                    .required(true)
-                    .index(1),
-            ),
-        )
-        .subcommand(
-            Command::new("generate")
-                .about("Generates a random sudoku")
-                .arg(
-                    Arg::new("givens")
-                        .help("How many givens are included (default 28)")
-                        .index(1),
-                )
-                .arg(
-                    Arg::new("count")
-                        .help("How many sudokus to generate (default 1)")
-                        .index(2),
-                ),
-        )
-        .get_matches();
+    let cli = Cli::parse();
 
-    if let Some(matches) = matches.subcommand_matches("solve") {
-        if let Some(sudoku_or_path) = matches.value_of("sudoku_or_path") {
-            match std::fs::metadata(sudoku_or_path) {
-                Ok(metadata) => {
-                    if metadata.is_file() {
-                        solve_file(sudoku_or_path)?;
-                    }
-                }
-                _ => {
-                    solve_single(sudoku_or_path)?;
-                }
+    match cli.command {
+        Commands::Solve { sudoku, path } => {
+            if let Some(sudoku) = sudoku {
+                solve_single(&sudoku)
+            } else if let Some(path) = path {
+                solve_file(&path, cli.verbose)
+            } else {
+                Ok(())
             }
         }
-    } else if let Some(matches) = matches.subcommand_matches("generate") {
-        let givens = matches.value_of_t("givens").unwrap_or(28);
-        let count = matches.value_of_t("count").unwrap_or(1);
-        generate(givens, count);
+        Commands::Generate { givens, count } => {
+            generate(givens, count, cli.verbose);
+            Ok(())
+        }
     }
-    Ok(())
 }

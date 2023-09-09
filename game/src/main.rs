@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
-use rustdoku_sudoku::{candidates::Candidates, generator, grid::Grid, solver::alx_solve};
-
 use sycamore::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, Event, HtmlInputElement, KeyboardEvent};
+
+use rustdoku_sudoku::{candidates::Candidates, generator, grid::Grid, solver::alx_solve};
 
 #[derive(PartialEq)]
 enum InputType {
@@ -223,14 +223,14 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
         (0..81)
             .map(|index| {
                 view! { cx,
-                    Cell {
-                        grid: grid,
-                        placemarks: placemarks,
-                        assisted: assisted,
-                        index: index,
-                        selected: selected,
-                        input_type: input_type
-                    }
+                    Cell(
+                        grid=grid,
+                        placemarks=placemarks,
+                        assisted=assisted,
+                        index=index,
+                        selected=selected,
+                        input_type=input_type
+                    )
                 }
             })
             .collect(),
@@ -246,11 +246,19 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
                         button(on:click=on_check) {"Check"}
                         button(on:click=on_solve) {"Solve"}
                         button(on:click=on_generate) {"Generate"}
-                        input(type="number", id="givens", value=*givens.get().to_string(), size=2, min=17, max=81, on:input=on_givens) {}
+                        input(
+                            type="number",
+                            id="givens",
+                            value=*givens.get().to_string(),
+                            size=2,
+                            min=17,
+                            max=81,
+                            on:input=on_givens
+                        )
                         label(for="givens") {"Givens"}
                     }
                     div {
-                        input(type="checkbox", id="assisted", checked=*assisted.get(), on:change=on_assisted) {}
+                        input(type="checkbox", id="assisted", checked=*assisted.get(), on:change=on_assisted)
                         label(for="assisted") {"Assisted"}
                     }
                     div {
@@ -264,9 +272,23 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
             }
             section(id="inputs") {
                 div(id="input_type") {
-                    input(type="radio", id="value_input", name="input_type", value="values", checked=*input_type.get() == InputType::Values, on:change=|_| input_type.set(InputType::Values)) {}
+                    input(
+                        type="radio",
+                        id="value_input",
+                        name="input_type",
+                        value="values",
+                        checked=*input_type.get() == InputType::Values,
+                        on:change=|_| input_type.set(InputType::Values)
+                    )
                     label(for="value_input") {"Value"}
-                    input(type="radio", id="candidate_input", name="input_type", value="candidates", checked=*input_type.get() == InputType::Candidates, on:change=|_| input_type.set(InputType::Candidates)) {}
+                    input(
+                        type="radio",
+                        id="candidate_input",
+                        name="input_type",
+                        value="candidates",
+                        checked=*input_type.get() == InputType::Candidates,
+                        on:change=|_| input_type.set(InputType::Candidates)
+                    )
                     label(for="candidate_input") {"Candidate"}
                 }
                 div(id="value_inputs", class=(if *input_type.get() == InputType::Values { "active" } else { "" })) {
@@ -277,18 +299,35 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
                             false
                         };
                         view! { cx,
-                            input(type="radio", name="value", id=format!("value_{}", i), value=i, on:change=move |_| on_value_changed(i), checked=checked) {}
+                            input(
+                                type="radio",
+                                name="value",
+                                id=format!("value_{}", i),
+                                value=i,
+                                on:change=move |_| on_value_changed(i),
+                                checked=checked
+                            )
                             label(for=format!("value_{}", i)) {(i)}
                         }
                     }).collect()))
-                    input(type="radio", name="value", id="value_0", value="0", on:change=move |_| on_value_changed(0), checked=if let Some(selected) = *selected.get() {
-                        (*grid.get()).get(selected) == 0
-                    } else {
-                        false
-                    }) {}
+                    input(
+                        type="radio",
+                        name="value",
+                        id="value_0",
+                        value="0",
+                        on:change=move |_| on_value_changed(0),
+                        checked=if let Some(selected) = *selected.get() {
+                            (*grid.get()).get(selected) == 0
+                        } else {
+                            false
+                        }
+                    )
                     label(for="value_0") {"0"}
                 }
-                div(id="candidate_inputs", class=(if *input_type.get() == InputType::Candidates { "active" } else { "" })) {
+                div(
+                    id="candidate_inputs",
+                    class=(if *input_type.get() == InputType::Candidates { "active" } else { "" })
+                ) {
                     (View::new_fragment((1..=9_usize).map(|i| {
                         let checked = if let Some(selected) = *selected.get() {
                             if *assisted.get() {
@@ -300,7 +339,14 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
                             false
                         };
                         view! { cx,
-                            input(type="checkbox", name="candidate", id=format!("candidate_{}", i), value=i, on:change=move |_| on_candidate_changed(i), checked=checked) {}
+                            input(
+                                type="checkbox",
+                                name="candidate",
+                                id=format!("candidate_{}", i),
+                                value=i,
+                                on:change=move |_| on_candidate_changed(i),
+                                checked=checked
+                            )
                             label(for=format!("candidate_{}", i)) {(i)}
                         }
                     }).collect()))
@@ -311,10 +357,9 @@ fn Game<G: Html>(cx: Scope) -> View<G> {
 }
 
 fn main() {
-    wasm_logger::init(wasm_logger::Config::default());
-    sycamore::render(|ctx| {
-        view! { ctx,
-            Game {}
+    sycamore::render(|cx| {
+        view! { cx,
+            Game
         }
     })
 }

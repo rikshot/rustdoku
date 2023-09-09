@@ -120,7 +120,7 @@ impl Grid {
     pub fn set(&mut self, index: usize, value: u8, checked: bool) -> bool {
         debug_assert!(index < 81);
         debug_assert!(value < 10);
-        let mut cell = &mut self.cells[index];
+        let cell = &mut self.cells[index];
         if !cell.frozen {
             cell.value = value;
             if checked {
@@ -234,7 +234,7 @@ impl PartialEq for Grid {
     }
 }
 
-#[derive(PartialEq, Error, Debug)]
+#[derive(PartialEq, Eq, Error, Debug)]
 pub enum ParseError {
     #[error("Invalid digit '{0}' at index {1} while parsing sudoku")]
     InvalidDigit(char, usize),
