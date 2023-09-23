@@ -11,7 +11,7 @@ header
 h1
     margin: 10px auto
 
-#controls *
+.controls *
     margin: 2px
     font-size: small
 
@@ -42,29 +42,6 @@ h1
 
     &:nth-child(n+19):nth-child(-n+27), &:nth-child(n+46):nth-child(-n+54), &:nth-child(n+73):nth-child(-n+81)
         border-bottom-width: 2px
-
-#victory
-    text-align: center
-    width: 380px
-    position: absolute
-    top: 300px
-    display: none
-    z-index: 1
-    text-shadow: -1px -1px white, -1px 1px white, 1px -1px white, 1px 1px white
-
-#grid.victory .cell
-    animation: victory 2s linear 0s infinite normal none
-
-@keyframes victory
-    0%
-        transform: rotate(0deg) scale(1)
-
-    50%
-        transform: rotate(180deg) scale(1.5)
-        background-color: green
-
-    100%
-        transform: rotate(360deg) scale(1)
 
 .candidates
     display: grid

@@ -1,21 +1,17 @@
 [package]
 name = "rustdoku-game"
 version = "0.1.0"
-description = "Sudoku game built with Sycamore"
+description = "Sudoku game built with Leptos"
 authors = ["Ville Orkas <ville@orkas.fi>"]
 edition = "2021"
 
 [dependencies]
 rustdoku-sudoku = { path = "../sudoku" }
-sycamore = "*"
 getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "*"
 gloo-dialogs = "*"
+leptos = { version = "0.5.0-rc3", features = ["csr"] }
 
 [dependencies.web-sys]
 version = "*"
-features = [
-    "Navigator",
-    "Clipboard",
-    "KeyboardEvent"
-]
+features = ["Navigator", "Clipboard", "KeyboardEvent"]
